@@ -16,6 +16,14 @@ The data scraper for Benjamin's SSW 900 thesis.
 
    This endpoint gets the detail of challenge by challenge id.
 
-- `http://api.topcoder.com/v2/users/{handle}`
+- `http://api.topcoder.com/v3/members/{handle}`
 
-   This _v2_ endpoint return detailed information of user. **The handle of user will be extracted only from the `winners` field of a challenge**.
+  - `http://api.topcoder.com/v3/members/{handle}/skills`
+
+     This endpoint returns user's skills recognized in TopCoder
+
+  - `http://api.topcoder.com/v3/members/{handle}/stats`
+
+     This endpoint returns ranking and challenges records of user
+
+   These _v3_ endpoints return detailed information of user. **The handle of user will be extracted only from the `winners` field of a challenge**.

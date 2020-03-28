@@ -60,6 +60,45 @@ def get_challenge_detail():
 
         time.sleep(3)
 
+def get_users():
+    """ Fetch the data of users."""
+    with open('./data/challenges_detail.json') as fjson:
+        registrant_handles_lst = {registrant['handle'] for challenge in json.load(fjson) for registrant in challenge['registrants']}
+
+    print(f'Fetching profiles of {len(registrant_handles_lst)} users...')
+    excluded_fields = ('userId', 'handle', 'handleLower', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy')
+    for idx, handle in enumerate(registrant_handles_lst, start=1):
+        url = f'{API_BASE_URL}/v3/members/{handle}'
+        res_user = requests.get(url)
+
+        if res_user.ok:
+            res_user_json = res_user.json()
+            user_profile = res_user_json['result']['content']
+            print('Fetched basic profile of user {0} | {1}/{2}'.format(user_profile['userId'], idx, len(registrant_handles_lst)))
+
+            res_user_stats = requests.get(f'{url}/stats')
+            if res_user_stats.ok:
+                user_stats = {key: val for key, val in res_user_stats.json().items() if key not in excluded_fields}
+                user_profile.update(user_stats)
+                print('\t* Fetched user stats: {0} wins in {1} challenges'.format(user_stats['wins'], user_stats['challenges']))
+            else:
+                print(f'\t* Fetching user stats failed: status code {res_user_stats.status_code}')
+                print(res_user_stats.text)
+
+            res_user_skills = requests.get(f'{url}/skills')
+            if res_user_skills.ok:
+                user_skills = res_user_skills.json()['result']['content']['skills']
+                user_profile.update(skills=user_skills)
+                print(f'\t* Fetched user skills: {len(user_skills)} in total')
+            else:
+                print(f'\t* Feteching user skills failed: status code {res_user_stats.status_code}')
+                print(res_user_skills.text)
+            
+            append_lst_to_json([user_profile], './data/users_profile.json')
+            time.sleep(3)
+        else:
+            print(f'Fetching user profiled failed: {handle} | {idx}/{len(registrant_handles_lst)}')
+
 if __name__ == '__main__':
     # get_challenges(amount=10000)
     get_challenge_detail()
