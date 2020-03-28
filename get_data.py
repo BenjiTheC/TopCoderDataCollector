@@ -2,6 +2,7 @@
 
 import os
 import json
+import time
 import requests
 from dotenv import load_dotenv
 from util import append_lst_to_json
@@ -22,7 +23,7 @@ def get_challenges(amount=500, start_offset=0):
     for offset in range(start_offset, start_offset + amount, 50):
         params = {
             'filter': 'status=COMPLETED',
-            'limit': limit,
+            'limit': 50,
             'offset': offset
         }
         res = requests.get(url, params=params)
@@ -30,11 +31,13 @@ def get_challenges(amount=500, start_offset=0):
         if res.status_code == 200:
             res_json = res.json()
             challenges_lst = res_json['result']['content']
-            print(f'Fetched {len(challenges_lst)} challenges, offset={offset}, limit={limit}')
+            print(f'Fetched {len(challenges_lst)} challenges, offset={offset}')
             append_lst_to_json(challenges_lst, './data/challenges_overview.json')
         else:
             print(f'Request failed, status code: {res.status_code}')
             print(res.json())
+
+        time.sleep(5)
 
 def get_challenge_detail():
     """ Fetch the detail of challenges."""
@@ -55,6 +58,8 @@ def get_challenge_detail():
             print(f'Request failed, status code: {res.status_code}')
             print(res.json())
 
+        time.sleep(3)
+
 if __name__ == '__main__':
-    get_challenges(amount=10000)
+    # get_challenges(amount=10000)
     get_challenge_detail()
