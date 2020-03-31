@@ -9,10 +9,6 @@ from util import append_lst_to_json
 load_dotenv()
 
 API_BASE_URL = os.getenv('API_BASE_URL')
-PROXIES = {
-    'http': 'http://127.0.0.1:7890',
-    'https': 'http://127.0.0.1:7890',
-}
 
 def get_challenges(amount=500, start_offset=0):
     """ Get the gievn `amount` of challenges from API, with `limit` of records 

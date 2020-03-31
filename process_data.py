@@ -2,8 +2,7 @@
 
 import os
 import json
-from datetime import datetime
-from util import append_lst_to_json
+from util import append_lst_to_json, parse_iso_dt
 
 def extract_challenges_info():
     """ Extract needed challenges data from fetched challenge details."""
@@ -33,8 +32,9 @@ def extract_challenges_info():
 
     date_fields = ('registrationStartDate', 'registrationEndDate', 'submissionEndDate', 'postingDate')
 
-    extracted_challenges = []
     print(f'Extracting {len(challenges)} challenges...')
+
+    extracted_challenges = []
     for idx, challenge in enumerate(challenges, start=1):
         processed_challenge = {}
 
@@ -45,10 +45,7 @@ def extract_challenges_info():
             processed_challenge[field] = '' if field not in challenge else ', '.join([str(i) for i in challenge[field]])
 
         for field in date_fields:
-            # consume ISO-8601 formatted UTC time string and parse a MySQL Datetime format string
-            # the datetime.fromisoformat() method support string in the format of
-            # `YYYY-MM-DD[*HH[:MM[:SS[.mmm[mmm]]]][+HH:MM[:SS[.ffffff]]]]` P.S. no trailing 'Z' accepted!
-            processed_challenge[field] = datetime.fromisoformat(challenge[field][:-1]).strftime('%Y-%m-%d %H:%M:%S')
+            processed_challenge[field] = parse_iso_dt(challenge[field])
 
         extracted_challenges.append(processed_challenge)
         print('Extracted challenge {0} | {1}/{2}'.format(challenge['challengeId'], idx, len(challenges)))
@@ -61,19 +58,23 @@ def extract_challenge_registrant():
     with open('./data/challenges_detail.json') as fjson_detail:
         challenges = json.load(fjson_detail)
 
-    challenge_registrant_relation = []
     print(f'Extracting challenge registrant relations of {len(challenges)} challenges')
+
+    challenge_registrant_relation = []
     for idx, challenge in enumerate(challenges, start=1):
+
         print('Extracting registrants for challege {} | {}/{}'.format(challenge['challengeId'], idx, len(challenges))) 
-        print('\t- {} registrants | {} submitters | {} submissions'.format(challenge['numberOfRegistrants'], challenge['numberOfSubmitters'], challenge['numberOfSubmitters']))
+        print('\t- {} registrants | {} submitters | {} submissions'\
+            .format(challenge['numberOfRegistrants'], challenge['numberOfSubmitters'], challenge['numberOfSubmitters']))
         
         if 'registrants' in challenge:
             for registrant in challenge['registrants']:
-                relation = {}
-                relation['challengeId'] = challenge['challengeId']
-                relation['handle'] = str(registrant['handle']).lower() # just in case there is int type handle
-                relation['registrationDate'] = registrant['registrationDate']
-                relation['submissionDate'] = '' if 'submissionDate' not in registrant else registrant['submissionDate']
+                relation = {
+                    'challengeId': challenge['challengeId'],
+                    'handle': str(registrant['handle']).lower(),
+                    'registrationDate': parse_iso_dt(registrant['registrationDate']),
+                    'submissionDate': '' if 'submissionDate' not in registrant else parse_iso_dt(registrant['submissionDate'])
+                }
 
                 challenge_registrant_relation.append(relation)
 
@@ -82,10 +83,72 @@ def extract_challenge_registrant():
 
 def extract_challenge_winner():
     """ Extract challenge winners."""
+    with open('./data/challenges_detail.json') as fjson_detail:
+        challenges = json.load(fjson_detail)
+        challenges_with_winner = [challenge for challenge in challenges if 'winners' in challenge] # not every challenge has a winner
+
+    print(f'{len(challenges_with_winner)} out of {len(challenges)} fetched challengs have at least a winner')
+
+    winners = []
+    winner_fields = ('submitter', 'rank', 'points')
+    for idx, challenge in enumerate(challenges_with_winner, start=1):
+        print('Extracting challenge {} | {}/{}'.format(challenge['challengeId'], idx, len(challenges_with_winner)))
+        for winner in sorted(challenge['winners'], key=lambda w: w['rank']):
+            extracted_winner = {
+                'handle': str(winner['submitter']).lower(),
+                'submissionTime': parse_iso_dt(winner['submissionTime']),
+                'rank': winner['rank'],
+                'points': winner['points']
+            }
+            winners.append(extracted_winner)
+
+    with open('./data/processed_data/challenge_winners.json', 'w') as fjson:
+        json.dump(winners, fjson, indent=4)
+
+    print(f'Extract {len(winners)} winners in total')
 
 def extract_user_profile():
     """ Extract user profile data."""
+    with open('./data/users_profile.json') as fjson_user:
+        users = json.load(fjson_user)
+
+    print(f'Extracting profiles of {len(users)} users...')
+
+    user_infos = []
+    user_skills = []
+    for idx, user in enumerate(users, start=1):
+        extracted_user = {
+            'handle': user['handleLower'],
+            'userId': user['userId'],
+            'memberSince': parse_iso_dt(user['createdAt']),
+            # there are users with one or both fields missing, so merge two fields into one and competition takes priority.
+            'countryCode': user['competitionCountryCode'] or user['homeCountryCode'] or '',
+            'description': user['description'] or '',
+            'wins': user['wins'] or 0,
+            'challenges': user['challenges'] or 0,
+        }
+        user_infos.append(extracted_user)
+
+        for skill in user['skills'].values():
+            extracted_skill = {
+                'userId': user['userId'],
+                'skill': skill['tagName'],
+                'score': skill['score'],
+                'fromChallenge': 'CHALLENGE' in skill['sources'],
+                'fromUserEnter': 'USER_ENTERED' in skill['sources']
+            }
+            user_skills.append(extracted_skill)
+
+        print('Extracted user {} with {} skills | {}/{}'.format(user['userId'], len(user['skills']), idx, len(users)))
+
+    with open('./data/processed_data/user_profiles.json', 'w') as fjson_uinfo:
+        json.dump(user_infos, fjson_uinfo, indent=4)
+
+    with open('./data/processed_data/user_skills.json', 'w') as fjson_uskill:
+        json.dump(user_skills, fjson_uskill, indent=4)
 
 if __name__ == '__main__':
     extract_challenges_info()
     extract_challenge_registrant()
+    extract_challenge_winner()
+    extract_user_profile()
