@@ -2,13 +2,21 @@
 
 import os
 import json
+from dotenv import load_dotenv
 from util import append_lst_to_json, parse_iso_dt
+load_dotenv()
+
+DATA_STORAGE_PATH = os.getenv('DATA_STORAGE_PATH')
+SCRAPED_DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, os.getenv('SCRAPED_DATA_PATH'))
+PROCESS_DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, os.getenv('PROCESS_DATA_PATH'))
+
+DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, SCRAPED_DATA_PATH) # Ensure the path format is cross-platform compatible
 
 def extract_challenges_info():
     """ Extract needed challenges data from fetched challenge details."""
-    with open('./data/challenges_overview.json') as fjson_overview:
+    with open(os.path.join(SCRAPED_DATA_PATH, 'challenges_overview.json')) as fjson_overview:
         challenges_overview = json.load(fjson_overview)
-    with open('./data/challenges_detail.json') as fjson_detail:
+    with open(os.path.join(SCRAPED_DATA_PATH, 'challenges_detail.json')) as fjson_detail:
         challenges_detail = json.load(fjson_detail)
 
     challenges = [{**overview, **detail} for overview, detail in zip(challenges_overview, challenges_detail)] # merge overview and detail of challenges
@@ -50,12 +58,12 @@ def extract_challenges_info():
         extracted_challenges.append(processed_challenge)
         print('Extracted challenge {0} | {1}/{2}'.format(challenge['challengeId'], idx, len(challenges)))
 
-    with open('./data/processed_data/challenges_info.json', 'w') as fjson:
+    with open(os.path.join(PROCESS_DATA_PATH, 'challenges_info.json'), 'w') as fjson:
         json.dump(extracted_challenges, fjson, indent=4)
 
 def extract_challenge_registrant():
     """ Extract the registrants of each challenge."""
-    with open('./data/challenges_detail.json') as fjson_detail:
+    with open(os.path.join(SCRAPED_DATA_PATH, 'challenges_detail.json')) as fjson_detail:
         challenges = json.load(fjson_detail)
 
     print(f'Extracting challenge registrant relations of {len(challenges)} challenges')
@@ -78,12 +86,12 @@ def extract_challenge_registrant():
 
                 challenge_registrant_relation.append(relation)
 
-    with open('./data/processed_data/challenge_registrant_relation.json', 'w') as fjson:
+    with open(os.path.join(PROCESS_DATA_PATH, 'challenge_registrant_relation.json'), 'w') as fjson:
         json.dump(challenge_registrant_relation, fjson, indent=4)
 
 def extract_challenge_winner():
     """ Extract challenge winners."""
-    with open('./data/challenges_detail.json') as fjson_detail:
+    with open(os.path.join(SCRAPED_DATA_PATH, 'challenges_detail.json')) as fjson_detail:
         challenges = json.load(fjson_detail)
         challenges_with_winner = [challenge for challenge in challenges if 'winners' in challenge] # not every challenge has a winner
 
@@ -102,14 +110,14 @@ def extract_challenge_winner():
             }
             winners.append(extracted_winner)
 
-    with open('./data/processed_data/challenge_winners.json', 'w') as fjson:
+    with open(os.path.join(PROCESS_DATA_PATH, 'challenge_winners.json'), 'w') as fjson:
         json.dump(winners, fjson, indent=4)
 
     print(f'Extract {len(winners)} winners in total')
 
 def extract_user_profile():
     """ Extract user profile data."""
-    with open('./data/users_profile.json') as fjson_user:
+    with open(os.path.join(SCRAPED_DATA_PATH, 'users_profile.json')) as fjson_user:
         users = json.load(fjson_user)
 
     print(f'Extracting profiles of {len(users)} users...')
@@ -141,10 +149,10 @@ def extract_user_profile():
 
         print('Extracted user {} with {} skills | {}/{}'.format(user['userId'], len(user['skills']), idx, len(users)))
 
-    with open('./data/processed_data/user_profiles.json', 'w') as fjson_uinfo:
+    with open(os.path.join(PROCESS_DATA_PATH, 'user_profiles.json'), 'w') as fjson_uinfo:
         json.dump(user_infos, fjson_uinfo, indent=4)
 
-    with open('./data/processed_data/user_skills.json', 'w') as fjson_uskill:
+    with open(os.path.join(PROCESS_DATA_PATH, 'user_skills.json'), 'w') as fjson_uskill:
         json.dump(user_skills, fjson_uskill, indent=4)
 
 if __name__ == '__main__':

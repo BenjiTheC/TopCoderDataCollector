@@ -1,5 +1,5 @@
 # Customized ignored
-data/
+data*/
 .vscode/
 sample_data*
 
