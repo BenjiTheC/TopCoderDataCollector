@@ -14,8 +14,7 @@ SCRAPED_DATA_PATH = os.getenv('SCRAPED_DATA_PATH')
 
 DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, SCRAPED_DATA_PATH) # Ensure the path format is cross-platform compatible
 
-WAIT_REQUEST = 5
-WAIT_SECONDS = 3
+WAIT_SECONDS = 2
 
 def get_challenges(amount=500, start_offset=0):
     """ Get the gievn `amount` of challenges from API, with `limit` of records 
@@ -43,9 +42,7 @@ def get_challenges(amount=500, start_offset=0):
         else:
             print(f'Fethcing failed with status code: {res.status_code}')
 
-        if idx % WAIT_REQUEST == 0:
-                print(f'Sleeping for {WAIT_SECONDS} seconds every {WAIT_REQUEST} requests...')
-                time.sleep(WAIT_SECONDS)
+        time.sleep(WAIT_SECONDS)
 
     concat_json_files(DATA_PATH, 'challenges_overview_*.json', 'challenges_overview.json')
 
@@ -76,9 +73,7 @@ def get_challenge_detail():
             else:
                 print(f'Fetching failed with status code: {res.status_code}')
 
-            if idx % WAIT_REQUEST == 0:
-                print(f'Sleeping for {WAIT_SECONDS} seconds every {WAIT_REQUEST} requests...')
-                time.sleep(WAIT_SECONDS)
+            time.sleep(WAIT_SECONDS)
 
     concat_json_files(DATA_PATH, 'challenges_detail_*.json', 'challenges_detail.json')
 
@@ -124,9 +119,7 @@ def get_users():
             else:
                 print(f'Fetching user profiled failed: {handle} | {start_idx + idx}/{len(registrant_handles)}')
 
-            if idx % WAIT_REQUEST == 0:
-                print(f'Sleeping for {WAIT_SECONDS} seconds every {WAIT_REQUEST} requests...')
-                time.sleep(WAIT_SECONDS)
+            time.sleep(WAIT_SECONDS)
 
     concat_json_files(DATA_PATH, 'users_profile_*.json', 'users_profile.json')
 
