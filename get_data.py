@@ -60,6 +60,10 @@ def get_challenge_detail():
     for file_idx, start_idx in enumerate(range(0, len(challenge_id_lst), chunk_size)):
         for idx, challenge_id in enumerate(challenge_id_lst[start_idx: start_idx + chunk_size], start=1):
 
+            if start_idx + idx <= 8447:
+                print(f'Skipping challenge {challenge_id} | {start_idx + idx}/{len(challenge_id_lst)}')
+                continue
+
             url = f'{API_BASE_URL}/v4/challenges/{challenge_id}'
             res = requests.get(url)
 
