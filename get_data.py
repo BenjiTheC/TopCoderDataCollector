@@ -48,7 +48,7 @@ def get_challenges(amount=500, start_offset=0):
 def get_challenge_detail():
     """ Fetch the detail of challenges."""
     challenge_id_lst = []
-    for file_name in sorted(iglob(os.path.join(DATA_PATH, 'challenges_overview_*.json')))
+    for file_name in sorted(iglob(os.path.join(DATA_PATH, 'challenges_overview_*.json'))):
         with open(file_name) as fjson:
             challenge_id_lst.extend([challenge['id'] for challenge in json.load(fjson)])
 
