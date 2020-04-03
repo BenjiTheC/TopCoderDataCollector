@@ -75,7 +75,7 @@ def get_challenge_detail():
 def get_users():
     """ Fetch the data of users."""
     registrant_handles = set()
-    for file_name in iglob(os.path.join(DATA_PATH, 'challenges_overview_*.json')):
+    for file_name in iglob(os.path.join(DATA_PATH, 'challenges_detail_*.json')):
         with open(file_name) as fjson:
             registrant_handles.update(str(registrant['handle']).lower() for challenge in json.load(fjson) if 'registrants' in challenge for registrant in challenge['registrants'])
 
@@ -120,6 +120,6 @@ def get_users():
             time.sleep(WAIT_SECONDS)
 
 if __name__ == '__main__':
-    get_challenges(amount=10000)
-    get_challenge_detail()
+    # get_challenges()
+    # get_challenge_detail()
     get_users()
