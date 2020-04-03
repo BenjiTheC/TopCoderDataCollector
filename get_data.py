@@ -4,6 +4,7 @@ import os
 import json
 import time
 import requests
+from glob import iglob
 from dotenv import load_dotenv
 from util import append_lst_to_json, concat_json_files
 load_dotenv()
@@ -44,22 +45,18 @@ def get_challenges(amount=500, start_offset=0):
 
         time.sleep(WAIT_SECONDS)
 
-    concat_json_files(DATA_PATH, 'challenges_overview_*.json', 'challenges_overview.json')
-
 def get_challenge_detail():
     """ Fetch the detail of challenges."""
-    with open(os.path.join(DATA_PATH, 'challenges_overview.json')) as fjson:
-        challenge_id_lst = [challenge['id'] for challenge in json.load(fjson)]
+    challenge_id_lst = []
+    for file_name in sorted(iglob(os.path.join(DATA_PATH, 'challenges_overview_*.json')))
+        with open(file_name) as fjson:
+            challenge_id_lst.extend([challenge['id'] for challenge in json.load(fjson)])
 
     print(f'Fetching details of {len(challenge_id_lst)} challenges...')
 
     chunk_size = 100
     for file_idx, start_idx in enumerate(range(0, len(challenge_id_lst), chunk_size)):
         for idx, challenge_id in enumerate(challenge_id_lst[start_idx: start_idx + chunk_size], start=1):
-
-            if start_idx + idx <= 8447:
-                print(f'Skipping challenge {challenge_id} | {start_idx + idx}/{len(challenge_id_lst)}')
-                continue
 
             url = f'{API_BASE_URL}/v4/challenges/{challenge_id}'
             res = requests.get(url)
@@ -75,15 +72,16 @@ def get_challenge_detail():
 
             time.sleep(WAIT_SECONDS)
 
-    concat_json_files(DATA_PATH, 'challenges_detail_*.json', 'challenges_detail.json')
-
 def get_users():
     """ Fetch the data of users."""
-    with open(os.path.join(DATA_PATH, 'challenges_detail.json')) as fjson:
-        registrant_handles = sorted({str(registrant['handle']).lower() for challenge in json.load(fjson) if 'registrants' in challenge for registrant in challenge['registrants']})
+    registrant_handles = set()
+    for file_name in iglob(os.path.join(DATA_PATH, 'challenges_overview_*.json')):
+        with open(file_name) as fjson:
+            registrant_handles.update(str(registrant['handle']).lower() for challenge in json.load(fjson) if 'registrants' in challenge for registrant in challenge['registrants'])
 
     print(f'Fetching profiles of {len(registrant_handles)} users...')
 
+    registrant_handles = sorted(registrant_handles)
     excluded_fields = ('userId', 'handle', 'handleLower', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy')
     chunk_size = 100
     for file_idx, start_idx in enumerate(range(0, len(registrant_handles), chunk_size)):
@@ -121,9 +119,7 @@ def get_users():
 
             time.sleep(WAIT_SECONDS)
 
-    concat_json_files(DATA_PATH, 'users_profile_*.json', 'users_profile.json')
-
 if __name__ == '__main__':
-    # get_challenges(amount=500)
+    get_challenges(amount=10000)
     get_challenge_detail()
     get_users()
