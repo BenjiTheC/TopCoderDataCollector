@@ -6,7 +6,7 @@ import time
 import requests
 from glob import iglob
 from dotenv import load_dotenv
-from util import append_lst_to_json, concat_json_files
+from util import append_lst_to_json, concat_json_files, get_sorted_filenames
 load_dotenv()
 
 API_BASE_URL = os.getenv('API_BASE_URL')
@@ -15,7 +15,7 @@ SCRAPED_DATA_PATH = os.getenv('SCRAPED_DATA_PATH')
 
 DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, SCRAPED_DATA_PATH) # Ensure the path format is cross-platform compatible
 
-WAIT_SECONDS = 2
+WAIT_SECONDS = 1
 
 def get_challenges(amount=500, start_offset=0):
     """ Get the gievn `amount` of challenges from API, with `limit` of records 
@@ -48,7 +48,7 @@ def get_challenges(amount=500, start_offset=0):
 def get_challenge_detail():
     """ Fetch the detail of challenges."""
     challenge_id_lst = []
-    for file_name in sorted(iglob(os.path.join(DATA_PATH, 'challenges_overview_*.json'))):
+    for file_name in get_sorted_filenames(DATA_PATH, 'challenges_overview_*.json'):
         with open(file_name) as fjson:
             challenge_id_lst.extend([challenge['id'] for challenge in json.load(fjson)])
 
@@ -75,7 +75,7 @@ def get_challenge_detail():
 def get_users():
     """ Fetch the data of users."""
     registrant_handles = set()
-    for file_name in iglob(os.path.join(DATA_PATH, 'challenges_detail_*.json')):
+    for file_name in get_sorted_filenames(DATA_PATH, 'challenges_detail_*.json'):
         with open(file_name) as fjson:
             registrant_handles.update(str(registrant['handle']).lower() for challenge in json.load(fjson) if 'registrants' in challenge for registrant in challenge['registrants'])
 

@@ -1,6 +1,7 @@
 """ Utility functions"""
 
 import os
+import re
 import json
 from glob import iglob
 from datetime import datetime
@@ -40,3 +41,7 @@ def concat_json_files(path, name_pattern, new_file_name):
 
     with open(os.path.join(path, new_file_name), 'w') as fwrite:
         json.dump(giant_data_set, fwrite, indent=4)
+
+def get_sorted_filenames(path, name_pattern):
+    """ Get the sorted file names sorted in integer index."""
+    return sorted(iglob(os.path.join(path, name_pattern)), key=lambda p: int(re.search(r'.*_([\d]*)\.json', p).group(1)))
