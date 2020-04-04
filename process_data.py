@@ -117,9 +117,10 @@ def extract_challenge_winner():
             print('Extracting challenge {} | {}/{}'.format(challenge['challengeId'], idx, len(challenges_with_winner)))
             for winner in sorted(challenge['winners'], key=lambda w: w['rank']):
                 extracted_winner = {
+                    'challengeId': challenge['challengeId'],
                     'handle': str(winner['submitter']).lower(),
-                    'submissionTime': parse_iso_dt(winner['submissionTime']),
-                    'rank': winner['rank'],
+                    'submissionDate': parse_iso_dt(winner['submissionTime']), # to unify the field with challenge-registrant 'submissionDate'
+                    'ranking': winner['rank'], # 'rank' is a reserved keywork in MySQL, use ranking instead
                     'points': winner['points']
                 }
                 winners.append(extracted_winner)
