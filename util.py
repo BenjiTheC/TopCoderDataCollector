@@ -5,6 +5,8 @@ import re
 import json
 from glob import iglob
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 def append_lst_to_json(new_lst, json_file):
     """ Append a list to a json file which is also a list.
@@ -45,3 +47,24 @@ def concat_json_files(path, name_pattern, new_file_name):
 def get_sorted_filenames(path, name_pattern):
     """ Get the sorted file names sorted in integer index."""
     return sorted(iglob(os.path.join(path, name_pattern)), key=lambda p: int(re.search(r'.*_([\d]*)\.json', p).group(1)))
+
+def validate_challegens():
+    """ Check whether the challenges_overview_*.json and challenges_detail_*.json
+        are correspondant.
+    """
+    data_path = os.path.join(os.curdir, os.getenv('DATA_STORAGE_PATH'), os.getenv('SCRAPED_DATA_PATH'))
+    overview_files = get_sorted_filenames(data_path, 'challenges_overview_*.json')
+    detail_files = get_sorted_filenames(data_path, 'challenges_detail_*.json')
+
+    for overview_fn, detail_fn in zip(overview_files, detail_files):
+        with open(overview_fn) as foverview:
+            overviews = json.load(foverview)
+        with open(detail_fn) as fdetail:
+            details = json.load(fdetail)
+
+        is_identical = all([overview['id'] == detail['challengeId'] for overview, detail in zip(overviews, details)])
+
+        if is_identical is not True:
+            raise ValueError(f'{overview_fn} and {detail_fn} are not identical!')
+
+        print(f'{os.path.split(overview_fn)[1]} and {os.path.split(detail_fn)[1]} are identical | {is_identical}')

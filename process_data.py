@@ -4,7 +4,7 @@ import os
 import json
 from glob import iglob
 from dotenv import load_dotenv
-from util import append_lst_to_json, parse_iso_dt
+from util import append_lst_to_json, parse_iso_dt, get_sorted_filenames
 load_dotenv()
 
 DATA_STORAGE_PATH = os.getenv('DATA_STORAGE_PATH')
@@ -15,8 +15,8 @@ DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, SCRAPED_DATA_PATH) # Ensu
 
 def extract_challenges_info():
     """ Extract needed challenges data from fetched challenge details."""
-    overview_files = sorted(iglob(os.path.join(SCRAPED_DATA_PATH, 'challenges_overview_*.json')))
-    detail_files = sorted(iglob(os.path.join(SCRAPED_DATA_PATH, 'challenges_detail_*.json')))
+    overview_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_overview_*.json')
+    detail_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_detail_*.json')
 
     intact_fields = (
         'challengeId',
@@ -61,6 +61,9 @@ def extract_challenges_info():
             for field in date_fields:
                 processed_challenge[field] = parse_iso_dt(challenge[field])
 
+            processed_challenge['detailedRequirements'] = processed_challenge['detailedRequirements'].replace('\ufffd', ' ')
+            processed_challenge['finalSubmissionGuidelines'] = processed_challenge['finalSubmissionGuidelines'].replace('\ufffd', ' ')
+
             extracted_challenges.append(processed_challenge)
             print('\tExtracted challenge {0} | {1}/{2}'.format(challenge['challengeId'], idx, len(challenges)))
 
@@ -69,7 +72,7 @@ def extract_challenges_info():
 
 def extract_challenge_registrant():
     """ Extract the registrants of each challenge."""
-    detail_files = sorted(iglob(os.path.join(SCRAPED_DATA_PATH, 'challenges_detail_*.json')))
+    detail_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_detail_*.json')
 
     for file_name_idx, detail_fn in enumerate(detail_files):
         
@@ -101,7 +104,7 @@ def extract_challenge_registrant():
 
 def extract_challenge_winner():
     """ Extract challenge winners."""
-    detail_files = sorted(iglob(os.path.join(SCRAPED_DATA_PATH, 'challenges_detail_*.json')))
+    detail_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_detail_*.json')
 
     for file_name_idx, detail_fn in enumerate(detail_files):
         
@@ -132,7 +135,7 @@ def extract_challenge_winner():
 
 def extract_user_profile():
     """ Extract user profile data."""
-    user_profile_files = sorted(iglob(os.path.join(SCRAPED_DATA_PATH, 'users_profile_*.json')))
+    user_profile_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'users_profile_*.json')
 
     for file_name_idx, profile_fn in enumerate(user_profile_files):
         with open(profile_fn) as fjson_user:
