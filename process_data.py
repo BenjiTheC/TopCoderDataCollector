@@ -4,7 +4,7 @@ import os
 import json
 from glob import iglob
 from dotenv import load_dotenv
-from util import append_lst_to_json, parse_iso_dt, get_sorted_filenames, show_progress, validate_challegens
+from util import append_lst_to_json, parse_iso_dt, get_sorted_filenames, show_progress
 load_dotenv()
 
 DATA_STORAGE_PATH = os.getenv('DATA_STORAGE_PATH')
@@ -12,6 +12,40 @@ SCRAPED_DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, os.getenv('SCRAPE
 PROCESS_DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, os.getenv('PROCESS_DATA_PATH'))
 
 DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, SCRAPED_DATA_PATH) # Ensure the path format is cross-platform compatible
+
+def validate_challegens():
+    """ Check whether the challenges_overview_*.json and challenges_detail_*.json
+        are correspondant.
+    """
+    overview_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_overview_*.json')
+    detail_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_detail_*.json')
+
+    nonidentical_file_name = []
+
+    for overview_fn, detail_fn in zip(overview_files, detail_files):
+        with open(overview_fn) as foverview:
+            overviews = json.load(foverview)
+        with open(detail_fn) as fdetail:
+            details = json.load(fdetail)
+
+        is_identical = all([overview['id'] == detail['challengeId'] for overview, detail in zip(overviews, details)])
+
+        if is_identical is not True:
+            nonidentical_file_name.append(
+                (
+                    os.path.split(overview_fn)[1],
+                    os.path.split(detail_fn)[1]
+                )
+            )
+
+    if len(nonidentical_file_name) == 0:
+        print('All files\' data is identical')
+        return True
+    else:
+        print('Not all files are identical. Nonidentical files:')
+        for ofn, dfn in nonidentical_file_name:
+            print(f'{ofn} | {dfn}')
+        return False
 
 def extract_challenges_info():
     """ Extract needed challenges data from fetched challenge details."""
@@ -168,8 +202,8 @@ def extract_user_profile():
             json.dump(user_skills, fjson_uskill, indent=4)
 
 if __name__ == '__main__':
-    validate_challegens()
-    extract_challenges_info()
-    extract_challenge_registrant()
-    extract_challenge_winner()
-    extract_user_profile()
+    if validate_challegens():
+        extract_challenges_info()
+        extract_challenge_registrant()
+        extract_challenge_winner()
+        extract_user_profile()
