@@ -8,7 +8,7 @@ from mysql import connector
 from mysql.connector import MySQLConnection
 from mysql.connector.cursor import MySQLCursor
 from dotenv import load_dotenv
-from util import get_sorted_filenames
+from util import get_sorted_filenames, show_progress
 load_dotenv()
 
 PROCESS_DATA_PATH = os.path.join(os.curdir, os.getenv('DATA_STORAGE_PATH'), os.getenv('PROCESS_DATA_PATH'))
@@ -42,7 +42,7 @@ def get_db_cnx():
 
     if DB_CONNECTION is None:
         try:
-            print('Connecting to Database {}/{}'.format(db_config['host'], db_config['database']))
+            print('Connecting to Database mysql://{}/{}'.format(db_config['host'], db_config['database']))
             DB_CONNECTION = connector.connect(**db_config)
             print('Database connected')
         except connector.Error as err:
@@ -57,22 +57,23 @@ def get_db_cnx():
 
 def insert_records(tb_name, data_file_pattern):
     """ A universal insertion function."""
-    print(f'Inserting data from {data_file_pattern}')
     cnx = get_db_cnx()
     cursor = cnx.cursor()
     for data_file_name in get_sorted_filenames(PROCESS_DATA_PATH, data_file_pattern):
         with open(data_file_name) as fjson:
             data_chunk = json.load(fjson)
 
-        for data in data_chunk:
+        for idx, data in enumerate(data_chunk, start=1):
             cursor.execute(construt_insert_query(tb_name, data.keys()), data)
-            print('.', end='', flush=True)
+            show_progress(idx, len(data_chunk), prefix=f'Uploading data to table {tb_name}', suffix=f'source: {os.path.split(data_file_name)[1]}')
 
         cnx.commit()
-        print('Upload {} data records from {}'.format(len(data_chunk), os.path.split(data_file_name)[1]))
 
     cursor.close()
 
 if __name__ == '__main__':
     for tb_name, data_file_patter in TABLE_NAME_DATA_FILE_PATTERN_MAP.items():
         insert_records(tb_name, data_file_patter)
+
+    if DB_CONNECTION:
+        DB_CONNECTION.close()

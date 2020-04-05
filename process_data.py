@@ -4,7 +4,7 @@ import os
 import json
 from glob import iglob
 from dotenv import load_dotenv
-from util import append_lst_to_json, parse_iso_dt, get_sorted_filenames
+from util import append_lst_to_json, parse_iso_dt, get_sorted_filenames, show_progress, validate_challegens
 load_dotenv()
 
 DATA_STORAGE_PATH = os.getenv('DATA_STORAGE_PATH')
@@ -46,8 +46,6 @@ def extract_challenges_info():
 
         challenges = [{**overview, **detail} for overview, detail in zip(challenges_overview, challenges_detail)] # merge overview and detail of challenges
 
-        print(f'Extracting {len(challenges)} challenges | {file_name_idx + 1}/{len(overview_files)}')
-
         extracted_challenges = []
         for idx, challenge in enumerate(challenges, start=1):
             processed_challenge = {}
@@ -65,7 +63,7 @@ def extract_challenges_info():
             processed_challenge['finalSubmissionGuidelines'] = processed_challenge['finalSubmissionGuidelines'].replace('\ufffd', ' ')
 
             extracted_challenges.append(processed_challenge)
-            print('\tExtracted challenge {0} | {1}/{2}'.format(challenge['challengeId'], idx, len(challenges)))
+            show_progress(idx, len(challenges), prefix=f'Extracting challenge info {file_name_idx + 1}/{len(overview_files)}')
 
         with open(os.path.join(PROCESS_DATA_PATH, f'challenges_info_{file_name_idx}.json'), 'w') as fjson:
             json.dump(extracted_challenges, fjson, indent=4)
@@ -79,15 +77,11 @@ def extract_challenge_registrant():
         with open(os.path.join(detail_fn)) as fjson_detail:
             challenges = json.load(fjson_detail)
 
-        print(f'Extracting challenge registrant relations of {len(challenges)} challenges | {file_name_idx + 1}/{len(detail_files)}')
-
         challenge_registrant_relation = []
         for idx, challenge in enumerate(challenges, start=1):
 
-            print('\tExtracting registrants for challege {} | {}/{}'.format(challenge['challengeId'], idx, len(challenges))) 
-            print('\t  - {} registrants | {} submitters | {} submissions'\
-                .format(challenge['numberOfRegistrants'], challenge['numberOfSubmitters'], challenge['numberOfSubmitters']))
-            
+            show_progress(idx, len(challenges), prefix=f'Extracting challenge registrant relations {file_name_idx + 1}/{len(detail_files)}')
+
             if 'registrants' in challenge:
                 for registrant in challenge['registrants']:
                     relation = {
@@ -112,12 +106,10 @@ def extract_challenge_winner():
             challenges = json.load(fjson_detail)
             challenges_with_winner = [challenge for challenge in challenges if 'winners' in challenge] # not every challenge has a winner
 
-        print(f'{len(challenges_with_winner)} out of {len(challenges)} challengs have at least a winner | {file_name_idx + 1}/{len(detail_files)}')
-
         winners = []
         winner_fields = ('submitter', 'rank', 'points')
         for idx, challenge in enumerate(challenges_with_winner, start=1):
-            print('Extracting challenge {} | {}/{}'.format(challenge['challengeId'], idx, len(challenges_with_winner)))
+
             for winner in sorted(challenge['winners'], key=lambda w: w['rank']):
                 extracted_winner = {
                     'challengeId': challenge['challengeId'],
@@ -128,10 +120,10 @@ def extract_challenge_winner():
                 }
                 winners.append(extracted_winner)
 
+            show_progress(idx, len(challenges_with_winner), prefix=f'Extracting winners from challenges {file_name_idx + 1}/{len(detail_files)}', suffix=f'{len(winners)} winners in total')
+
         with open(os.path.join(PROCESS_DATA_PATH, f'challenge_winners_{file_name_idx}.json'), 'w') as fjson:
             json.dump(winners, fjson, indent=4)
-
-        print(f'\tExtract {len(winners)} winners in total')
 
 def extract_user_profile():
     """ Extract user profile data."""
@@ -140,8 +132,6 @@ def extract_user_profile():
     for file_name_idx, profile_fn in enumerate(user_profile_files):
         with open(profile_fn) as fjson_user:
             users = json.load(fjson_user)
-
-        print(f'Extracting profiles of {len(users)} users | {file_name_idx + 1}/{len(user_profile_files)}')
 
         user_infos = []
         user_skills = []
@@ -168,7 +158,8 @@ def extract_user_profile():
                 }
                 user_skills.append(extracted_skill)
 
-            print('\tExtracted user {} with {} skills | {}/{}'.format(user['userId'], len(user['skills']), idx, len(users)))
+            # print('\tExtracted user {} with {} skills | {}/{}'.format(user['userId'], len(user['skills']), idx, len(users)))
+            show_progress(idx, len(users), prefix=f'Extracting user profiles {file_name_idx + 1}/{len(user_profile_files)}')
 
         with open(os.path.join(PROCESS_DATA_PATH, f'user_profiles_{file_name_idx}.json'), 'w') as fjson_uinfo:
             json.dump(user_infos, fjson_uinfo, indent=4)
@@ -177,6 +168,7 @@ def extract_user_profile():
             json.dump(user_skills, fjson_uskill, indent=4)
 
 if __name__ == '__main__':
+    validate_challegens()
     extract_challenges_info()
     extract_challenge_registrant()
     extract_challenge_winner()

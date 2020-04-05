@@ -68,3 +68,11 @@ def validate_challegens():
             raise ValueError(f'{overview_fn} and {detail_fn} are not identical!')
 
         print(f'{os.path.split(overview_fn)[1]} and {os.path.split(detail_fn)[1]} are identical | {is_identical}')
+
+def show_progress(progress, total, bar_length = 30, decimal = 1, prefix = 'Progress', suffix = 'Complete', progress_sign = '■', remained_sign = ' '):
+    """ Show the progress of a sequence for operation."""
+    percentage = progress/total
+    progress_length = int(bar_length * percentage)
+    remained_length = bar_length - progress_length
+
+    print(f'{prefix} | {100 * percentage:.{decimal}f}% [{progress_sign * progress_length}{remained_sign * remained_length}] {progress}/{total} | {suffix}', end = '\r' if progress != total else '\n')
