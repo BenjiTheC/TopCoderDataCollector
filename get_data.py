@@ -55,7 +55,7 @@ def get_challenge_detail():
     print(f'Fetching details of {sum([len(l) for l in challenge_id_dct.values()])} challenges...')
 
     for file_idx, challenge_id_lst in challenge_id_dct.items():
-        for idx, challenge_id in enumerate(challenge_id_lst, start=1)
+        for idx, challenge_id in enumerate(challenge_id_lst, start=1):
             url = f'{API_BASE_URL}/v4/challenges/{challenge_id}'
             res = requests.get(url)
 
