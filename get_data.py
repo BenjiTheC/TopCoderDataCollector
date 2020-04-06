@@ -6,7 +6,7 @@ import time
 import requests
 from glob import iglob
 from dotenv import load_dotenv
-from util import append_lst_to_json, concat_json_files, get_sorted_filenames
+from util import append_lst_to_json, concat_json_files, get_sorted_filenames, show_progress
 load_dotenv()
 
 API_BASE_URL = os.getenv('API_BASE_URL')
@@ -39,7 +39,7 @@ def get_challenges(amount=500, start_offset=0):
             res_json = res.json()
             challenges_lst = res_json['result']['content']
             append_lst_to_json(challenges_lst, os.path.join(DATA_PATH, f'challenges_overview_{file_idx}.json'))
-            print(f'Fetched {len(challenges_lst)} challenges, offset={offset}')
+            print(f'Fetched {len(challenges_lst)} challenges, offset={offset}, writing into challenges_overview_{file_idx}.json')
         else:
             print(f'Fethcing failed with status code: {res.status_code}')
 
@@ -47,17 +47,15 @@ def get_challenges(amount=500, start_offset=0):
 
 def get_challenge_detail():
     """ Fetch the detail of challenges."""
-    challenge_id_lst = []
-    for file_name in get_sorted_filenames(DATA_PATH, 'challenges_overview_*.json'):
+    challenge_id_dct = {} 
+    for file_idx, file_name in enumerate(get_sorted_filenames(DATA_PATH, 'challenges_overview_*.json')):
         with open(file_name) as fjson:
-            challenge_id_lst.extend([challenge['id'] for challenge in json.load(fjson)])
+            challenge_id_dct[file_idx] = [challenge['id'] for challenge in json.load(fjson)]
 
-    print(f'Fetching details of {len(challenge_id_lst)} challenges...')
+    print(f'Fetching details of {sum([len(l) for l in challenge_id_dct.values()])} challenges...')
 
-    chunk_size = 100
-    for file_idx, start_idx in enumerate(range(0, len(challenge_id_lst), chunk_size)):
-        for idx, challenge_id in enumerate(challenge_id_lst[start_idx: start_idx + chunk_size], start=1):
-
+    for file_idx, challenge_id_lst in challenge_id_dct.items():
+        for idx, challenge_id in enumerate(challenge_id_lst, start=1)
             url = f'{API_BASE_URL}/v4/challenges/{challenge_id}'
             res = requests.get(url)
 
@@ -66,9 +64,9 @@ def get_challenge_detail():
                 challenge_detail = res_json['result']['content']
                 append_lst_to_json([challenge_detail], os.path.join(DATA_PATH, f'challenges_detail_{file_idx}.json'))
 
-                print(f'Fetched detail of challenge {challenge_id} | {start_idx + idx}/{len(challenge_id_lst)}')
+                show_progress(idx, len(challenge_id_lst), prefix=f'Fetched detail of challenge {challenge_id}', suffix=f'==> challenges_detail_{file_idx}.json')
             else:
-                print(f'Fetching failed with status code: {res.status_code}')
+                show_progress(idx, len(challenge_id_lst), prefix=f'Fetching {challenge_id} failed: code {res.status_code}', suffix=f'==> challenges_detail_{file_idx}.json')
 
             time.sleep(WAIT_SECONDS)
 
@@ -97,7 +95,11 @@ def get_users():
 
                 res_user_stats = requests.get(f'{url}/stats')
                 if res_user_stats.ok:
-                    user_stats = res_user_stats.json()['result']['content'][0] # the 'content' field is a list with only 1 element - user stats
+                    user_data = res_user_stats.json()['result']['content']
+                    if type(user_data) is not list:
+                        print('\t* User stats data type is problematic, skipping')
+
+                    user_stats = user_data[0] # the 'content' field is a list with only 1 element - user stats
                     user_profile.update({k: v for k, v in user_stats.items() if k not in excluded_fields}) # prevent overwriting of duplicate fields
                     print('\t* Fetched user stats: {0} wins in {1} challenges'.format(user_stats['wins'], user_stats['challenges']))
                 else:
