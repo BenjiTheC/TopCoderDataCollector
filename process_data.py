@@ -20,8 +20,9 @@ def validate_challegens():
     overview_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_overview_*.json')
     detail_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_detail_*.json')
 
-    nonidentical_file_name = []
+    nonidentical_file_names = []
 
+    print('Validating files...')
     for overview_fn, detail_fn in zip(overview_files, detail_files):
         with open(overview_fn) as foverview:
             overviews = json.load(foverview)
@@ -31,21 +32,30 @@ def validate_challegens():
         is_identical = all([overview['id'] == detail['challengeId'] for overview, detail in zip(overviews, details)])
 
         if is_identical is not True:
-            nonidentical_file_name.append(
-                (
-                    os.path.split(overview_fn)[1],
-                    os.path.split(detail_fn)[1]
-                )
-            )
+            print(f'Found nonidentical data file: {os.path.split(overview_fn)[1]} | {os.path.split(detail_fn)[1]}')
+            nonidentical_file_names.append((overview_fn, detail_fn))
 
-    if len(nonidentical_file_name) == 0:
-        print('All files\' data is identical')
-        return True
+    if len(nonidentical_file_names) == 0:
+        return True, nonidentical_file_names
     else:
-        print('Not all files are identical. Nonidentical files:')
-        for ofn, dfn in nonidentical_file_name:
-            print(f'{ofn} | {dfn}')
-        return False
+        return False, nonidentical_file_names
+
+def unify_challenge_files(nonidentical_file_names):
+    """ Unify the challenges data in overview and details for givenv files"""
+    print('Unifying files...')
+    for overview_fn, detail_fn in nonidentical_file_names:
+        with open(overview_fn) as foverview:
+            overviews = json.load(foverview)
+        with open(detail_fn) as fdetail:
+            details = json.load(fdetail)
+
+        challenge_id_in_details = [detail['challengeId'] for detail in details] # no need to use set since I already know the ids will be unique
+        unified_overviews = [overview for overview in overviews if overview['id'] in challenge_id_in_details]
+
+        with open(overview_fn, 'w') as fwrite:
+            json.dump(unified_overviews, fwrite, indent=4)
+
+        print(f'Found {len(details)} challenges in detail file but {len(overviews)} in overview, deleted {len(overviews) - len(details)} useless challenge overivew.')
 
 def extract_challenges_info():
     """ Extract needed challenges data from fetched challenge details."""
@@ -202,7 +212,12 @@ def extract_user_profile():
             json.dump(user_skills, fjson_uskill, indent=4)
 
 if __name__ == '__main__':
-    if validate_challegens():
+    data_identical, nonidentical_file_names = validate_challegens()
+    if data_identical is False:
+        unify_challenge_files(nonidentical_file_names)
+
+    double_check_data_identical, double_check_nonidentical_file_names = validate_challegens()
+    if double_check_data_identical:
         extract_challenges_info()
         extract_challenge_registrant()
         extract_challenge_winner()
