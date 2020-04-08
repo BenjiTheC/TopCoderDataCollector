@@ -13,6 +13,8 @@ PROCESS_DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, os.getenv('PROCES
 
 DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, SCRAPED_DATA_PATH) # Ensure the path format is cross-platform compatible
 
+MYSQL_DT_ZERO = '0000-00-00 00:00:00'
+
 def validate_challegens():
     """ Check whether the challenges_overview_*.json and challenges_detail_*.json
         are correspondant.
@@ -109,7 +111,7 @@ def extract_challenges_info():
                 processed_challenge[field] = '' if field not in challenge else ', '.join([str(i) for i in challenge[field]])
 
             for field in date_fields:
-                processed_challenge[field] = '' if field not in challenge else parse_iso_dt(challenge[field])
+                processed_challenge[field] = MYSQL_DT_ZERO if field not in challenge else parse_iso_dt(challenge[field])
 
             processed_challenge['detailedRequirements'] = processed_challenge['detailedRequirements'].replace('\ufffd', ' ')
             processed_challenge['finalSubmissionGuidelines'] = processed_challenge['finalSubmissionGuidelines'].replace('\ufffd', ' ')
@@ -140,7 +142,7 @@ def extract_challenge_registrant():
                         'challengeId': challenge['challengeId'],
                         'handle': str(registrant['handle']).lower(),
                         'registrationDate': parse_iso_dt(registrant['registrationDate']),
-                        'submissionDate': '' if 'submissionDate' not in registrant else parse_iso_dt(registrant['submissionDate'])
+                        'submissionDate': MYSQL_DT_ZERO if 'submissionDate' not in registrant else parse_iso_dt(registrant['submissionDate'])
                     }
 
                     challenge_registrant_relation.append(relation)
@@ -166,7 +168,7 @@ def extract_challenge_winner():
                 extracted_winner = {
                     'challengeId': challenge['challengeId'],
                     'handle': str(winner['submitter']).lower(),
-                    'submissionDate': '' if 'submissionTime' not in winner else parse_iso_dt(winner['submissionTime']), # to unify the field with challenge-registrant 'submissionDate'
+                    'submissionDate': MYSQL_DT_ZERO if 'submissionTime' not in winner else parse_iso_dt(winner['submissionTime']), # to unify the field with challenge-registrant 'submissionDate'
                     'ranking': -1 if 'rank' not in winner else winner['rank'], # 'rank' is a reserved keywork in MySQL, use ranking instead
                     'points': -1 if 'points' not in winner else winner['points']
                 }
