@@ -98,6 +98,7 @@ def get_users():
                     user_data = res_user_stats.json()['result']['content']
                     if type(user_data) is not list:
                         print('\t* User stats data type is problematic, skipping')
+                        continue
 
                     user_stats = user_data[0] # the 'content' field is a list with only 1 element - user stats
                     user_profile.update({k: v for k, v in user_stats.items() if k not in excluded_fields}) # prevent overwriting of duplicate fields

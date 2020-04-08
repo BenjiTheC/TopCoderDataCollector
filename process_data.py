@@ -101,7 +101,7 @@ def extract_challenges_info():
                 processed_challenge[field] = '' if field not in challenge else ', '.join([str(i) for i in challenge[field]])
 
             for field in date_fields:
-                processed_challenge[field] = parse_iso_dt(challenge[field])
+                processed_challenge[field] = '' if field not in challenge else parse_iso_dt(challenge[field])
 
             processed_challenge['detailedRequirements'] = processed_challenge['detailedRequirements'].replace('\ufffd', ' ')
             processed_challenge['finalSubmissionGuidelines'] = processed_challenge['finalSubmissionGuidelines'].replace('\ufffd', ' ')
@@ -216,8 +216,14 @@ if __name__ == '__main__':
     if data_identical is False:
         unify_challenge_files(nonidentical_file_names)
 
-    double_check_data_identical, double_check_nonidentical_file_names = validate_challegens()
-    if double_check_data_identical:
+        double_check_data_identical, double_check_nonidentical_file_names = validate_challegens()
+        if double_check_data_identical is True:
+            extract_challenges_info()
+            extract_challenge_registrant()
+            extract_challenge_winner()
+            extract_user_profile()
+
+    else:
         extract_challenges_info()
         extract_challenge_registrant()
         extract_challenge_winner()
