@@ -154,7 +154,7 @@ def extract_challenge_winner():
         winner_fields = ('submitter', 'rank', 'points')
         for idx, challenge in enumerate(challenges_with_winner, start=1):
 
-            for winner in sorted(challenge['winners'], key=lambda w: w['rank']):
+            for winner in sorted(challenge['winners'], key=lambda w: w['rank'] if 'rank' in w else w):
                 extracted_winner = {
                     'challengeId': challenge['challengeId'],
                     'handle': str(winner['submitter']).lower(),
