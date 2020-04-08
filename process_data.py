@@ -158,9 +158,9 @@ def extract_challenge_winner():
                 extracted_winner = {
                     'challengeId': challenge['challengeId'],
                     'handle': str(winner['submitter']).lower(),
-                    'submissionDate': parse_iso_dt(winner['submissionTime']), # to unify the field with challenge-registrant 'submissionDate'
-                    'ranking': winner['rank'], # 'rank' is a reserved keywork in MySQL, use ranking instead
-                    'points': winner['points']
+                    'submissionDate': '' if 'submissionTime' not in winner else parse_iso_dt(winner['submissionTime']), # to unify the field with challenge-registrant 'submissionDate'
+                    'ranking': -1 if 'rank' not in winner else winner['rank'], # 'rank' is a reserved keywork in MySQL, use ranking instead
+                    'points': -1 if 'points' not in winner else winner['points']
                 }
                 winners.append(extracted_winner)
 
