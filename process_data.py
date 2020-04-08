@@ -62,20 +62,25 @@ def extract_challenges_info():
     overview_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_overview_*.json')
     detail_files = get_sorted_filenames(SCRAPED_DATA_PATH, 'challenges_detail_*.json')
 
-    intact_fields = (
-        'challengeId',
-        'projectId',
-        'forumId',
-        'track', # previous challengeCommunity, one of (DEVELOP, DESIGN, DATA_SCIENCE)
-        'subTrack', # previous challengeType one of (DESIGN, DEVELOPMENT, SECURITY, PROCESS, TESTING_COMPETITION, SPECIFICATION, ARCHITECTURE, COMPONENT_PRODUCTION, BUG_HUNT, DEPLOYMENT, TEST_SUITES, ASSEMBLY_COMPETITION, UI_PROTOTYPE_COMPETITION, CONCEPTUALIZATION, RIA_BUILD_COMPETITION, RIA_COMPONENT_COMPETITION, TEST_SCENARIOS, SPEC_REVIEW, COPILOT_POSTING, CONTENT_CREATION, REPORTING, DEVELOP_MARATHON_MATCH, FIRST_2_FINISH, CODE, BANNERS_OR_ICONS, WEB_DESIGNS, WIREFRAMES, LOGO_DESIGN, PRINT_OR_PRESENTATION, WIDGET_OR_MOBILE_SCREEN_DESIGN, FRONT_END_FLASH, APPLICATION_FRONT_END_DESIGN, STUDIO_OTHER, IDEA_GENERATION, DESIGN_FIRST_2_FINISH, SRM, MARATHON_MATCH)
-        'challengeTitle',
-        'detailedRequirements',
-        'finalSubmissionGuidelines',
-        'totalPrize',
-        'numberOfRegistrants',
-        'numberOfSubmissions',
-        'numberOfSubmitters'
-    )
+    intact_fields = {
+        'number': (
+            'challengeId',
+            'projectId',
+            'forumId', 
+            'totalPrize',
+            'numberOfRegistrants',
+            'numberOfSubmissions',
+            'numberOfSubmitters'
+        ),
+
+        'string': (
+            'track', # previous challengeCommunity, one of (DEVELOP, DESIGN, DATA_SCIENCE)
+            'subTrack', # previous challengeType one of (DESIGN, DEVELOPMENT, SECURITY, PROCESS, TESTING_COMPETITION, SPECIFICATION, ARCHITECTURE, COMPONENT_PRODUCTION, BUG_HUNT, DEPLOYMENT, TEST_SUITES, ASSEMBLY_COMPETITION, UI_PROTOTYPE_COMPETITION, CONCEPTUALIZATION, RIA_BUILD_COMPETITION, RIA_COMPONENT_COMPETITION, TEST_SCENARIOS, SPEC_REVIEW, COPILOT_POSTING, CONTENT_CREATION, REPORTING, DEVELOP_MARATHON_MATCH, FIRST_2_FINISH, CODE, BANNERS_OR_ICONS, WEB_DESIGNS, WIREFRAMES, LOGO_DESIGN, PRINT_OR_PRESENTATION, WIDGET_OR_MOBILE_SCREEN_DESIGN, FRONT_END_FLASH, APPLICATION_FRONT_END_DESIGN, STUDIO_OTHER, IDEA_GENERATION, DESIGN_FIRST_2_FINISH, SRM, MARATHON_MATCH)
+            'challengeTitle',
+            'detailedRequirements',
+            'finalSubmissionGuidelines'
+        )
+    }
 
     join_fields = ('platforms', 'technologies')
 
@@ -94,7 +99,10 @@ def extract_challenges_info():
         for idx, challenge in enumerate(challenges, start=1):
             processed_challenge = {}
 
-            for field in intact_fields:
+            for field in intact_fields['number']:
+                processed_challenge[field] = -1 if field not in challenge else challenge[field]
+
+            for field in intact_fields['string']:
                 processed_challenge[field] = '' if field not in challenge else challenge[field]
 
             for field in join_fields:
