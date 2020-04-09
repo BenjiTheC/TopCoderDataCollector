@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS Challenge, Challenge_Registrant_Relation, Challenge_Winner, User_Profile, User_Skill;
+
 CREATE TABLE IF NOT EXISTS Challenge
 (
     challengeId INT(8) PRIMARY KEY,
@@ -8,16 +10,16 @@ CREATE TABLE IF NOT EXISTS Challenge
     subTrack VARCHAR(30), # one of (DESIGN, DEVELOPMENT, SECURITY, PROCESS, TESTING_COMPETITION, SPECIFICATION, ARCHITECTURE, COMPONENT_PRODUCTION, BUG_HUNT, DEPLOYMENT, TEST_SUITES, ASSEMBLY_COMPETITION, UI_PROTOTYPE_COMPETITION, CONCEPTUALIZATION, RIA_BUILD_COMPETITION, RIA_COMPONENT_COMPETITION, TEST_SCENARIOS, SPEC_REVIEW, COPILOT_POSTING, CONTENT_CREATION, REPORTING, DEVELOP_MARATHON_MATCH, FIRST_2_FINISH, CODE, BANNERS_OR_ICONS, WEB_DESIGNS, WIREFRAMES, LOGO_DESIGN, PRINT_OR_PRESENTATION, WIDGET_OR_MOBILE_SCREEN_DESIGN, FRONT_END_FLASH, APPLICATION_FRONT_END_DESIGN, STUDIO_OTHER, IDEA_GENERATION, DESIGN_FIRST_2_FINISH, SRM, MARATHON_MATCH)
 
     challengeTitle VARCHAR(512),
-    detailedRequirements TEXT,
-    finalSubmissionGuidelines TEXT,
+    detailedRequirements MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+    finalSubmissionGuidelines MEDIUMTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
 
     totalPrize FLOAT,
     numberOfRegistrants INT(4),
     numberOfSubmissions INT(4),
     numberOfSubmitters INT(4),
 
-    platforms VARCHAR(128),
-    technologies VARCHAR(256),
+    platforms VARCHAR(512),
+    technologies VARCHAR(512),
 
     registrationStartDate DATETIME,
     registrationEndDate DATETIME,
@@ -27,23 +29,21 @@ CREATE TABLE IF NOT EXISTS Challenge
 
 CREATE TABLE IF NOT EXISTS Challenge_Registrant_Relation (
     challengeId INT(8),
-    handle VARCHAR(128),
+    handle VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     registrationDate DATETIME,
-    submissionDate DATETIME,
-    PRIMARY KEY(challengeId, handle)
+    submissionDate DATETIME
 ) ENGINE = INNODB;
 
 CREATE TABLE IF NOT EXISTS Challenge_Winner (
     challengeId INT(8),
-    handle VARCHAR(128),
+    handle VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     submissionDate DATETIME,
     ranking INT(8),
-    points FLOAT,
-    PRIMARY KEY(challengeId, handle)
+    points FLOAT
 ) ENGINE = INNODB;
 
 CREATE TABLE IF NOT EXISTS  User_Profile (
-    handle VARCHAR(128) UNIQUE,
+    handle VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
     userId INT(8) UNIQUE,
     memberSince DATETIME,
     countryCode CHAR(3),
@@ -60,4 +60,3 @@ CREATE TABLE IF NOT EXISTS User_Skill (
     fromChallenge BOOLEAN,
     fromUserEnter BOOLEAN
 ) ENGINE = INNODB;
-
