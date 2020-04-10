@@ -13,7 +13,7 @@ PROCESS_DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, os.getenv('PROCES
 
 DATA_PATH = os.path.join(os.curdir, DATA_STORAGE_PATH, SCRAPED_DATA_PATH) # Ensure the path format is cross-platform compatible
 
-MYSQL_DT_ZERO = '0000-00-00 00:00:00'
+MYSQL_DT_ZERO = None
 
 def validate_challegens():
     """ Check whether the challenges_overview_*.json and challenges_detail_*.json
