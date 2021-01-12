@@ -4,9 +4,8 @@ import os
 import json
 import time
 import requests
-from glob import iglob
 from dotenv import load_dotenv
-from util import append_lst_to_json, concat_json_files, get_sorted_filenames, show_progress
+from util import append_lst_to_json, get_sorted_filenames, show_progress
 load_dotenv()
 
 API_BASE_URL = os.getenv('API_BASE_URL')

@@ -2,9 +2,15 @@
 
 The data scraper for collecting research data from Topcoder.com
 
-Currently Topcoder publish a new version of API - v5. [Here is the official anouncement](https://www.topcoder.com/an-update-from-the-product-development-team-challenge-v5-api-release/).
+## Command Line Interface design
 
-## Major APIs and the documentation:
+```sh
+python3 topcoder_data_collecter.py --with-registrant --since 2014-1-1 --to 2020-12-31 --proxy 1080
+```
+
+## Major APIs and the documentation
+
+Currently Topcoder publish a new version of API - v5. [Here is the official anouncement](https://www.topcoder.com/an-update-from-the-product-development-team-challenge-v5-api-release/).
 
 1. Challenge data service:
    * GitHub repo: <https://github.com/topcoder-platform/challenge-api>
