@@ -4,7 +4,7 @@ import os
 import re
 import json
 from glob import iglob
-from datetime import datetime
+from datetime import datetime, timezone
 
 def append_lst_to_json(new_lst, json_file):
     """ Append a list to a json file which is also a list.
@@ -53,3 +53,17 @@ def show_progress(progress, total, bar_length = 30, decimal = 1, prefix = 'Progr
     remained_length = bar_length - progress_length
 
     print(f'{prefix} | {100 * percentage:.{decimal}f}% [{progress_sign * progress_length}{remained_sign * remained_length}] {progress}/{total} | {suffix}', end = '\r' if progress != total else '\n')
+
+def replace_datetime_tail(dt: datetime, tail: str = 'max'):
+    """ Replace the hour, minute, second, microsecond, tzinfo parts of datetime object
+        to either datetime.max.time() or datetime.min.time()
+    """
+    return (
+        dt.replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc)
+        if tail == 'max' else
+        dt.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
+    )
+            
+def datetime_to_isoformat(dt: datetime):
+    """ The built-in datetime.isoformat doesn't have trailing Z"""
+    return '{}Z'.format(dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])

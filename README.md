@@ -15,6 +15,8 @@ Currently Topcoder publish a new version of API - v5. [Here is the official anou
 1. Challenge data service:
    * GitHub repo: <https://github.com/topcoder-platform/challenge-api>
    * Swagger OpenAPI doc: <http://api.topcoder.com/v5/challenges/docs/>
+   **Important**: The url <https://api.topcoder.com/v5/challenges/> has two pagination parameters `perPage` and `page`, where `perPage` stands for the number of data objects (challenges) per fetch and `page` is number of pages to fetch. `perPage` has an official value interval of `[1, 100]`, whereas `page` has no specified limit. _HOWEVER, if the `page` value is **greater than 100**, there will be only empty array returned._
+
    > The registrants' data of a challenge is missing from v5 API, need to use v4 api to fetch registrant data
    >
    > ```sh
