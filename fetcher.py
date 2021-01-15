@@ -5,17 +5,14 @@ import json
 import logging
 import asyncio
 import aiohttp
+import aiofiles
 from pathlib import Path
 from pprint import pprint
 from collections import defaultdict
 from datetime import datetime, timezone
 from util import datetime_to_isoformat
-from static_var import CHALLENGE_URL, RESOURCE_URL, AUTH_TOKEN, Status
+from static_var import MAXIMUM_OPEN_FILES, CHALLENGE_URL, RESOURCE_URL, AUTH_TOKEN, Status
 from url import URL
-
-
-BATCH = 10
-SLEEP = 1.5
 
 
 class Fetcher:
@@ -98,25 +95,34 @@ class Fetcher:
 
         return param
 
-    def construct_registrant_param(self) -> list[tuple[int, int, str, URL]]:
+    async def construct_registrant_param(self) -> list[tuple[int, int, str, URL]]:
         """ Construct the parameters for fetching the challenge registrant from fetched challenge (for the first time)."""
         regex = re.compile(r'(?P<year>[\d]{4})_(?P<page>[\d]{1,2})_challenge_lst\.json')
         registrant_params: list[tuple[int, int, str, URL]] = []
+        semaphore = asyncio.Semaphore(MAXIMUM_OPEN_FILES)  # Preventing OSError: [Errno 24] Too many open files
 
-        for challenge_lst_file in self.output_dir.glob('*_challenge_lst.json'):
-            year, page = map(int, regex.match(challenge_lst_file.name).groups())
-            with open(challenge_lst_file) as f:
-                for challenge in json.load(f):
-                    if challenge['numOfRegistrants'] != 0:
-                        url = RESOURCE_URL.copy()
-                        url.query_param.set('challengeId', challenge['id'])
-                        registrant_params.append((year, page, challenge['id'], url))
+        async def read_challenge_lst(challenge_lst_file: Path):
+            async with semaphore:
+                year, page = map(int, regex.match(challenge_lst_file.name).groups())
+                async with aiofiles.open(challenge_lst_file) as f:
+                    for challenge in json.loads(await f.read()):
+                        if challenge['numOfRegistrants'] != 0:
+                            url = RESOURCE_URL.copy()
+                            url.query_param.set('challengeId', challenge['id'])
+                            registrant_params.append((year, page, challenge['id'], url))
 
-                        self.logger.debug(
-                            'Year %d page %d cha %s | number of registrants: %d',
-                            year, page, challenge['id'], challenge['numOfRegistrants']
-                        )
+                            self.logger.debug(
+                                'Year %d page %d cha %s | number of registrants: %d',
+                                year, page, challenge['id'], challenge['numOfRegistrants']
+                            )
 
+        coro_queue = [
+            asyncio.create_task(
+                read_challenge_lst(challenge_lst_file),
+                name=f'ConstructRegParam-{challenge_lst_file.name}',
+            ) for challenge_lst_file in self.output_dir.glob('*_challenge_lst.json')
+        ]
+        await asyncio.gather(*coro_queue)
         self.logger.debug('Number of registrant params: %d', len(registrant_params))
 
         return registrant_params
@@ -167,6 +173,7 @@ class Fetcher:
         """ Call async fetch method to fetch all challenges"""
         challenge_params, unfetch_challenge_params = [], self.construct_fetch_challenge_param()
         fetch_rnd = 0
+        semaphore = asyncio.Semaphore(MAXIMUM_OPEN_FILES)
 
         while len(unfetch_challenge_params) > 0:
             self.logger.info('Challenges Fetch round %d | Unfetched %d', fetch_rnd, len(unfetch_challenge_params))
@@ -174,7 +181,7 @@ class Fetcher:
 
             coro_queue = [
                 asyncio.create_task(
-                    self.fetch_challenge_year_page(session, year, url, page, unfetch_challenge_params),
+                    self.fetch_challenge_year_page(session, year, url, page, unfetch_challenge_params, semaphore),
                     name=f'FetchChallenges-year-{year}-page-{page}-round-{fetch_rnd}',
                 ) for year, url, page in challenge_params
             ]
@@ -188,7 +195,8 @@ class Fetcher:
         year: int,
         url: URL,
         page: int,
-        failed_fetch: list
+        failed_fetch: list,
+        semaphore: asyncio.Semaphore,
     ) -> None:
         """ Fetch a singe page of challengess (100 challenges per page except for the last page)"""
         try:
@@ -207,13 +215,15 @@ class Fetcher:
                 year, page, len(challenge_lst), len(json.dumps(challenge_lst).encode('utf-8'))
             )
 
-            with open(self.output_dir / f'{year}_{page}_challenge_lst.json', 'w') as f:
-                json.dump(challenge_lst, f)
+            async with semaphore:
+                async with aiofiles.open(self.output_dir / f'{year}_{page}_challenge_lst.json', 'w') as f:
+                    await f.write(json.dumps(challenge_lst))
 
     async def fetch_registrants(self, session: aiohttp.ClientSession) -> None:
         """ Insert regsitrant list into challenge object"""
-        registrant_params, unfetch_registrant_params = [], self.construct_registrant_param()
+        registrant_params, unfetch_registrant_params = [], await self.construct_registrant_param()
         fetch_rnd = 0
+        semaphore = asyncio.Semaphore(MAXIMUM_OPEN_FILES)
 
         while len(unfetch_registrant_params) > 0:
             self.logger.debug('Registrants Fetch round %d | Unfetched %d', fetch_rnd, len(unfetch_registrant_params))
@@ -221,7 +231,9 @@ class Fetcher:
 
             coro_queue = [
                 asyncio.create_task(
-                    self.fetch_registrant_year_page(session, year, page, challenge_id, url, unfetch_registrant_params),
+                    self.fetch_registrant_year_page(
+                        session, year, page, challenge_id, url, unfetch_registrant_params, semaphore
+                    ),
                     name=f'FetchRegistrant-year-{year}-page-{page}-cha-{challenge_id}-round-{fetch_rnd}'
                 ) for year, page, challenge_id, url in registrant_params
             ]
@@ -237,6 +249,7 @@ class Fetcher:
         challenge_id: str,
         url: URL,
         failed_fetch: list,
+        semaphore: asyncio.Semaphore,
     ) -> None:
         """ Fetch single challenge registrant"""
         try:
@@ -255,8 +268,9 @@ class Fetcher:
             failed_fetch.append((year, page, challenge_id, url))
             self.logger.error('Year %d page %d challenge %s | Fetching timeout', year, page, challenge_id)
         else:
-            with open(self.output_dir / f'{year}_{page}_{challenge_id}_registrant_lst.json', 'w') as f:
-                json.dump(registrant_lst, f)
+            async with semaphore:
+                async with aiofiles.open(self.output_dir / f'{year}_{page}_{challenge_id}_registrant_lst.json', 'w') as f:
+                    await f.write(json.dumps(registrant_lst))
         
     async def fetch_member_by_handle_lower(self, session: aiohttp.ClientSession):
         """ Fetch user by handleLower."""

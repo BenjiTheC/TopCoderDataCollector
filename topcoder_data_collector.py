@@ -4,7 +4,7 @@ import asyncio
 import argparse
 from pathlib import Path
 from fetcher import Fetcher
-from static_var import Status
+from static_var import Status, DEFAULT_DATA_PATH
 from datetime import datetime, timezone, timedelta
 from util import replace_datetime_tail, init_logger
 
@@ -43,7 +43,7 @@ def init():
     parser.add_argument(
         '--output-dir',
         dest='output_dir',
-        default=Path(os.path.join(os.curdir, 'data')),
+        default=DEFAULT_DATA_PATH,
         type=Path,
         help='Directory for storoage of the fetch data. Create one if not exist',
     )
