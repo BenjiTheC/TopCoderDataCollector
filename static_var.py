@@ -10,7 +10,7 @@ load_dotenv()
 
 MEMBER_URL = URL('{}/v5/members/'.format(os.getenv('API_BASE_URL')))
 CHALLENGE_URL = URL('{}/v5/challenges/?{}'.format(os.getenv('API_BASE_URL'), os.getenv('DEFAULT_CHALLENGE_QUERY')))
-CHALLENGE_URL_V4 = URL('{}/v4/challenges'.format(os.getenv('API_BASE_URL')))
+RESOURCE_URL = URL('{}/v5/resources/?perPage=5000'.format(os.getenv('API_BASE_URL')))
 AUTH_TOKEN = os.getenv('JWT') and 'Bearer {}'.format(os.getenv('JWT'))
 
 GLOBAL_VAR = {}

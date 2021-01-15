@@ -3,10 +3,10 @@ import os
 import asyncio
 import argparse
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
-from util import replace_datetime_tail
-from static_var import Status
 from fetcher import Fetcher
+from static_var import Status
+from datetime import datetime, timezone, timedelta
+from util import replace_datetime_tail, init_logger
 
 
 def init():
@@ -45,7 +45,20 @@ def init():
         dest='output_dir',
         default=Path(os.path.join(os.curdir, 'data')),
         type=Path,
-        help='Directory for store the fetch data. Create one if not exist'
+        help='Directory for storoage of the fetch data. Create one if not exist',
+    )
+    parser.add_argument(
+        '--log-dir',
+        dest='log_dir',
+        default=Path(os.path.join(os.curdir, 'logs')),
+        type=Path,
+        help='Directory for stroage of logs. Create one if not exist',
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=False,
+        help='Whether to log debug level message.'
     )
 
     args = parser.parse_args()
@@ -57,7 +70,12 @@ def init():
     if not args.output_dir.is_dir():
         os.mkdir(args.output_dir)
 
-    asyncio.run(Fetcher(**args.__dict__).fetch())
+    if not args.log_dir.is_dir():
+        os.mkdir(args.log_dir)
+
+    logger = init_logger(args.log_dir, 'fetch', args.debug)
+
+    asyncio.run(Fetcher(args.status, args.since, args.to, args.with_registrant, args.output_dir, logger).fetch())
 
 
 if __name__ == '__main__':
