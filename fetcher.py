@@ -1,21 +1,15 @@
 """ Topcoder data collector using http://api.topcoder.com/v5"""
 import re
-import math
 import json
 import logging
 import asyncio
 import aiohttp
 from pathlib import Path
-from pprint import pprint
 from collections import defaultdict
 from datetime import datetime, timezone
 from util import datetime_to_isoformat
 from static_var import CHALLENGE_URL, RESOURCE_URL, AUTH_TOKEN, Status
 from url import URL
-
-
-BATCH = 10
-SLEEP = 1.5
 
 
 class Fetcher:
@@ -61,7 +55,8 @@ class Fetcher:
         else:
             CHALLENGE_URL.query_param.set('status', status.value)
 
-    def __init__(self,
+    def __init__(
+        self,
         status: Status,
         since: datetime,
         to: datetime,
@@ -99,7 +94,9 @@ class Fetcher:
         return param
 
     def construct_registrant_param(self) -> list[tuple[int, int, str, URL]]:
-        """ Construct the parameters for fetching the challenge registrant from fetched challenge (for the first time)."""
+        """ Construct the parameters for fetching the challenge registrant from
+            fetched challenge (for the first time).
+        """
         regex = re.compile(r'(?P<year>[\d]{4})_(?P<page>[\d]{1,2})_challenge_lst\.json')
         registrant_params: list[tuple[int, int, str, URL]] = []
 
@@ -257,6 +254,6 @@ class Fetcher:
         else:
             with open(self.output_dir / f'{year}_{page}_{challenge_id}_registrant_lst.json', 'w') as f:
                 json.dump(registrant_lst, f)
-        
+
     async def fetch_member_by_handle_lower(self, session: aiohttp.ClientSession):
         """ Fetch user by handleLower."""

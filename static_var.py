@@ -3,7 +3,6 @@
 """
 import os
 import enum
-import typing as T
 from dotenv import load_dotenv
 from url import URL
 load_dotenv()
@@ -12,8 +11,6 @@ MEMBER_URL = URL('{}/v5/members/'.format(os.getenv('API_BASE_URL')))
 CHALLENGE_URL = URL('{}/v5/challenges/?{}'.format(os.getenv('API_BASE_URL'), os.getenv('DEFAULT_CHALLENGE_QUERY')))
 RESOURCE_URL = URL('{}/v5/resources/?perPage=5000'.format(os.getenv('API_BASE_URL')))
 AUTH_TOKEN = os.getenv('JWT') and 'Bearer {}'.format(os.getenv('JWT'))
-
-GLOBAL_VAR = {}
 
 
 class Status(str, enum.Enum):
