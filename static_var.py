@@ -3,28 +3,17 @@
 """
 import os
 import enum
-import pathlib
-from collections import namedtuple
+import typing as T
 from dotenv import load_dotenv
 from url import URL
 load_dotenv()
-
-
-MAXIMUM_OPEN_FILES = 100
 
 MEMBER_URL = URL('{}/v5/members/'.format(os.getenv('API_BASE_URL')))
 CHALLENGE_URL = URL('{}/v5/challenges/?{}'.format(os.getenv('API_BASE_URL'), os.getenv('DEFAULT_CHALLENGE_QUERY')))
 RESOURCE_URL = URL('{}/v5/resources/?perPage=5000'.format(os.getenv('API_BASE_URL')))
 AUTH_TOKEN = os.getenv('JWT') and 'Bearer {}'.format(os.getenv('JWT'))
 
-DEFAULT_DATA_PATH = pathlib.Path('data')
-
-MongoConfig = namedtuple('MongoConfig', ['host', 'port', 'database'])
-MONGO_CONFIG = MongoConfig(
-    host=os.getenv('MONGO_HOST'),
-    port=os.getenv('MONGO_PORT'),
-    database=os.getenv('MONGO_DATABASE'),
-)
+GLOBAL_VAR = {}
 
 
 class Status(str, enum.Enum):
