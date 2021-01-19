@@ -6,7 +6,11 @@ import logging
 import pathlib
 from glob import iglob
 from datetime import datetime, timezone
+from dateutil.parser import isoparse
 
+CAMEL_CASE_REGEX = re.compile(r'(?<!^)(?=[A-Z])')
+# NOTE: This regex below is NOT solid but sufficient for our use case
+ISO_DT_REGEX = re.compile(r'[\d]{4}-[\d]{2}-[\d]{2}T[\d]{2}:[\d]{2}:[\d]{2}Z')
 
 def init_logger(log_dir: pathlib.Path, log_name: str, debug: bool) -> logging.Logger:
     """ Initiate logger for fetching."""
@@ -24,6 +28,30 @@ def init_logger(log_dir: pathlib.Path, log_name: str, debug: bool) -> logging.Lo
     logger.addHandler(stream_handle)
 
     return logger
+
+
+def snake_case_json_key(obj):
+    """ When loading json into python, the dictionary/list of dictionary can be
+        camelCase-keyed. we should convert it before further process/usage.
+    """
+    if not isinstance(obj, (list, dict)):
+        return obj
+
+    if isinstance(obj, list):
+        return [snake_case_json_key(o) for o in obj]
+
+    return {CAMEL_CASE_REGEX.sub('_', k).lower(): snake_case_json_key(v) for k, v in obj.items()}
+
+
+def convert_datetime_json_value(obj):
+    """ Convert the ISO-8601 datetime string to datetime object."""
+    if not isinstance(obj, (list, dict)):
+        return obj if not (isinstance(obj, str) and ISO_DT_REGEX.match(obj)) else isoparse(obj)
+
+    if isinstance(obj, list):
+        return [convert_datetime_json_value(o) for o in obj]
+
+    return {k: convert_datetime_json_value(v) for k, v in obj.items()}
 
 
 def get_sorted_filenames(path, name_pattern):

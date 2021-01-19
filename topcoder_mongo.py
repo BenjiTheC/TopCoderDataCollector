@@ -1,0 +1,91 @@
+""" Methods for MongoDB operation including writing fetched data and query data."""
+import asyncio
+import os
+import re
+import json
+import typing
+import logging
+import pathlib
+import motor.motor_asyncio
+from dateutil.parser import isoparse
+from datetime import datetime, timezone
+from static_var import MONGO_CONFIG
+from util import snake_case_json_key, convert_datetime_json_value
+
+MONGO_CLIENT: typing.Any = None
+
+def connect() -> motor.motor_asyncio.AsyncIOMotorDatabase:
+    """ Connect to the local MongoDB server. Return a handle of tuixue database."""
+    global MONGO_CLIENT
+    if MONGO_CLIENT is None:  # keep one alive connection will be enough (and preferred)
+        MONGO_CLIENT = motor.motor_asyncio.AsyncIOMotorClient(host=MONGO_CONFIG.host, port=MONGO_CONFIG.port)
+
+    database = MONGO_CLIENT[MONGO_CONFIG.database]
+    return database
+
+
+def get_collection(collection_name: str) -> motor.motor_asyncio.AsyncIOMotorCollection:
+    """ Return a MongoDB collection from the established client database."""
+    db = connect()
+    return db.get_collection(collection_name)
+
+
+class TopcoderMongo:
+    """ MongoDB database operation using Motor"""
+    challenge = get_collection('challenge')
+    regex = re.compile(r'(?P<year>[\d]{4})_(?P<page>[\d]{1,2})_challenge_lst\.json')
+
+    def __init__(self, logger: logging.Logger, input_dir: pathlib.Path) -> None:
+        self.logger = logger
+        self.input_dir = input_dir
+
+    async def initiate_database(self) -> None:
+        start_initiation = datetime.now()
+        await self.challenge.drop()
+        await self.write_challenges()
+        end_initiation = datetime.now()
+        self.logger.debug('Initiation starts at %s ends at %s', start_initiation.strftime('%H:%M:%S'), end_initiation.strftime('%H:%M:%S'))
+        self.logger.debug('Initiation finished, total time used: %d seconds', (end_initiation - start_initiation).total_seconds())
+
+    async def write_challenges(self) -> None:
+        """ Methods for inserting all of the fetch challenges. (Of course we pre-process it before inserting ;-)"""
+        coro_queue = [
+            asyncio.create_task(
+                self.write_challenge_year_page(challenge_lst_file),
+                name='InsertChallenges-year-{}-page-{}'.format(
+                    *map(int, self.regex.match(challenge_lst_file.name).groups())
+                ),
+            ) for challenge_lst_file in self.input_dir.glob('*_challenge_lst.json')
+        ]
+
+        await asyncio.gather(*coro_queue)
+
+    async def write_challenge_year_page(self, challenge_lst_file: pathlib.Path) -> None:
+        year, page = map(int, self.regex.match(challenge_lst_file.name).groups())
+        self.logger.info('Year %d page %d | Inserting', year, page)
+
+        challenge_lst = []
+        with open(challenge_lst_file) as f:
+            challenge_lst = [
+                {
+                    **raw_challenge,
+                    'status': raw_challenge['status'].split('-')[0].strip(),
+                    'detailed_status': raw_challenge['status']
+                } for raw_challenge in convert_datetime_json_value(snake_case_json_key(json.load(f)))
+            ]
+
+
+        for challenge in challenge_lst:
+            if challenge['num_of_registrants'] > 0:
+                with open(self.input_dir / '{}_{}_{}_registrant_lst.json'.format(year, page, challenge['id'])) as f:
+                    challenge['registrant_lst'] = convert_datetime_json_value(snake_case_json_key(json.load(f)))
+                    self.logger.debug(
+                        'Year %d page %d challenge %s | Read registrant list::%d',
+                        year,
+                        page,
+                        challenge['id'],
+                        len(challenge['registrant_lst']),
+                    )
+
+        await self.challenge.insert_many(challenge_lst)
+        self.logger.info('Year %d page %d | Inserted %d challenges into mongo', year, page, len(challenge_lst))

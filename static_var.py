@@ -3,6 +3,7 @@
 """
 import os
 import enum
+from collections import namedtuple
 from dotenv import load_dotenv
 from url import URL
 load_dotenv()
@@ -11,6 +12,27 @@ MEMBER_URL = URL('{}/v5/members/'.format(os.getenv('API_BASE_URL')))
 CHALLENGE_URL = URL('{}/v5/challenges/?{}'.format(os.getenv('API_BASE_URL'), os.getenv('DEFAULT_CHALLENGE_QUERY')))
 RESOURCE_URL = URL('{}/v5/resources/?perPage=5000'.format(os.getenv('API_BASE_URL')))
 AUTH_TOKEN = os.getenv('JWT') and 'Bearer {}'.format(os.getenv('JWT'))
+
+MongoConfig = namedtuple('MongoConfig', ['host', 'port', 'database'])
+MONGO_CONFIG = MongoConfig(host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT")), database=os.getenv("MONGO_DATABASE"))
+
+# Some meta data from topcoder.com, manually written here because it's pretty short
+DETAILED_STATUS = [
+    'New',
+    'Draft',
+    'Cancelled',
+    'Active',
+    'Completed',
+    'Deleted',
+    'Cancelled - Failed Review',
+    'Cancelled - Failed Screening',
+    'Cancelled - Zero Submissions',
+    'Cancelled - Winner Unresponsive',
+    'Cancelled - Client Request',
+    'Cancelled - Requirements Infeasible',
+    'Cancelled - Zero Registrations',
+]
+STATUS = ['New', 'Draft', 'Cancelled', 'Active', 'Completed', 'Deleted']
 
 
 class Status(str, enum.Enum):
