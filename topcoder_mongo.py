@@ -66,14 +66,7 @@ class TopcoderMongo:
 
         challenge_lst = []
         with open(challenge_lst_file) as f:
-            challenge_lst = [
-                {
-                    **raw_challenge,
-                    'status': raw_challenge['status'].split('-')[0].strip(),
-                    'detailed_status': raw_challenge['status']
-                } for raw_challenge in convert_datetime_json_value(snake_case_json_key(json.load(f)))
-            ]
-
+            challenge_lst = convert_datetime_json_value(snake_case_json_key(json.load(f)))
 
         for challenge in challenge_lst:
             if challenge['num_of_registrants'] > 0:
