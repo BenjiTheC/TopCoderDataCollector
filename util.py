@@ -10,7 +10,6 @@ from dateutil.parser import isoparse
 
 CAMEL_CASE_REGEX = re.compile(r'(?<!^)(?=[A-Z])')
 # NOTE: This regex below is NOT solid but sufficient for our use case
-ISO_DT_REGEX = re.compile(r'[\d]{4}-[\d]{2}-[\d]{2}T[\d]{2}:[\d]{2}:[\d]{2}Z')
 
 def init_logger(log_dir: pathlib.Path, log_name: str, debug: bool) -> logging.Logger:
     """ Initiate logger for fetching."""
@@ -46,7 +45,12 @@ def snake_case_json_key(obj):
 def convert_datetime_json_value(obj):
     """ Convert the ISO-8601 datetime string to datetime object."""
     if not isinstance(obj, (list, dict)):
-        return obj if not (isinstance(obj, str) and ISO_DT_REGEX.match(obj)) else isoparse(obj)
+        try:
+            dt = isoparse(obj)
+        except (ValueError, TypeError):
+            return obj
+        else:
+            return dt
 
     if isinstance(obj, list):
         return [convert_datetime_json_value(o) for o in obj]
