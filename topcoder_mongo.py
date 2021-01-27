@@ -9,7 +9,7 @@ import pathlib
 import motor.motor_asyncio
 from dateutil.parser import isoparse
 from datetime import datetime, timezone
-from static_var import MONGO_CONFIG
+from static_var import MONGO_CONFIG, TRACK
 from util import snake_case_json_key, convert_datetime_json_value
 
 MONGO_CLIENT: typing.Any = None
@@ -33,6 +33,7 @@ def get_collection(collection_name: str) -> motor.motor_asyncio.AsyncIOMotorColl
 class TopcoderMongo:
     """ MongoDB database operation using Motor"""
     challenge = get_collection('challenge')
+    project = get_collection('project')
     regex = re.compile(r'(?P<year>[\d]{4})_(?P<page>[\d]{1,2})_challenge_lst\.json')
 
     def __init__(self, logger: logging.Logger, input_dir: pathlib.Path) -> None:
@@ -43,9 +44,58 @@ class TopcoderMongo:
         start_initiation = datetime.now()
         await self.challenge.drop()
         await self.write_challenges()
+        await self.write_projects()
         end_initiation = datetime.now()
         self.logger.debug('Initiation starts at %s ends at %s', start_initiation.strftime('%H:%M:%S'), end_initiation.strftime('%H:%M:%S'))
         self.logger.debug('Initiation finished, total time used: %d seconds', (end_initiation - start_initiation).total_seconds())
+
+    async def write_projects(self) -> None:
+        """ Methods that extract project info from challenges."""
+        count_by_track_cond = {
+            f'num_of_challenge_{track}': {
+                '$sum': {'$toInt': {'$eq': ['$track', track]}}
+            } for track in TRACK
+        }
+
+        query = [
+            {
+                '$group': {
+                    '_id': '$project_id',
+                    'id': {'$first': '$project_id'},
+                    'challenge_lst': {
+                        '$push': {'id': '$id', 'start_date': '$start_date', 'end_date': '$end_date'}
+                    },
+                    'start_date': {'$min': '$start_date'},
+                    'end_date': {'$max': '$end_date'},
+                    'num_of_challenge_Total': {'$sum': 1},
+                    **count_by_track_cond,
+                    'tracks': {'$addToSet': '$track'},
+                    'types': {'$addToSet': '$type'},
+                },
+            },
+            {
+                '$set': {
+                    'duration': {
+                        '$toInt': {
+                            '$divide': [
+                                {'$subtract': ['$end_date', '$start_date']},
+                                24 * 60 * 60 * 1000
+                            ],
+                        },
+                    },
+                    'num_of_challenge': [{'track': track, 'count': f'$num_of_challenge_{track}'} for track in TRACK + ['Total']],
+                },
+            },
+            {'$project': {'_id': False, **{f'num_of_challenge_{track}': False for track in TRACK + ['Total']}}},
+        ]
+
+        self.logger.info('Creating project data from challenge data...')
+        project_data = []
+        async for doc in self.challenge.aggregate(query):
+            self.logger.debug('Project %s | number of challenges: %d', str(doc['id']), doc['num_of_challenge'][-1]['count'])
+            project_data.append(doc)
+        await self.project.drop()
+        await self.project.insert_many(project_data)
 
     async def write_challenges(self) -> None:
         """ Methods for inserting all of the fetch challenges. (Of course we pre-process it before inserting ;-)"""

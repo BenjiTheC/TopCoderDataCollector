@@ -33,6 +33,8 @@ DETAILED_STATUS = [
     'Cancelled - Zero Registrations',
 ]
 STATUS = ['New', 'Draft', 'Cancelled', 'Active', 'Completed', 'Deleted']
+TRACK = ['Data Science', 'Design', 'Development', 'Quality Assurance']
+TYPE = ['Challenge', 'First2Finish', 'Task']
 
 
 class Status(str, enum.Enum):
