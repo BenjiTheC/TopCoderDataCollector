@@ -2,10 +2,34 @@
 
 The data scraper for collecting research data from Topcoder.com
 
+## Dependency
+
+**This repo is written in Python 3.9.1.**
+
+run
+
+```sh
+python3 -m pip install -r requirements.py
+```
+
+to install the packages needed in the code. A virtural environment is recommended.
+
 ## Command Line Interface design
+
+### Fetcher
+
+> Fetch the data from Topcoder.com
 
 ```sh
 python3 topcoder_data_collecter.py --with-registrant --since 2014-1-1 --to 2020-12-31 --proxy 1080
+```
+
+### Uploader
+
+> Write the data into mongoDB
+
+```sh
+python3 topcoder_data_uploader.py --debug # You can emit debug flag, it will print less information
 ```
 
 ## Major APIs and the documentation
