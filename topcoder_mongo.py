@@ -46,8 +46,8 @@ class TopcoderMongo:
         await self.write_challenges()
         await self.write_projects()
         end_initiation = datetime.now()
-        self.logger.debug('Initiation starts at %s ends at %s', start_initiation.strftime('%H:%M:%S'), end_initiation.strftime('%H:%M:%S'))
-        self.logger.debug('Initiation finished, total time used: %d seconds', (end_initiation - start_initiation).total_seconds())
+        self.logger.info('Initiation starts at %s ends at %s', start_initiation.strftime('%H:%M:%S'), end_initiation.strftime('%H:%M:%S'))
+        self.logger.info('Initiation finished, total time used: %d seconds', (end_initiation - start_initiation).total_seconds())
 
     async def write_projects(self) -> None:
         """ Methods that extract project info from challenges."""
@@ -63,7 +63,13 @@ class TopcoderMongo:
                     '_id': '$project_id',
                     'id': {'$first': '$project_id'},
                     'challenge_lst': {
-                        '$push': {'id': '$id', 'start_date': '$start_date', 'end_date': '$end_date'}
+                        '$push': {
+                            'id': '$id',
+                            'start_date': '$start_date',
+                            'end_date': '$end_date',
+                            'track': '$track',
+                            'type': '$type',
+                        },
                     },
                     'start_date': {'$min': '$start_date'},
                     'end_date': {'$max': '$end_date'},
