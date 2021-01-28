@@ -69,6 +69,7 @@ class TopcoderMongo:
                             'end_date': '$end_date',
                             'track': '$track',
                             'type': '$type',
+                            'status': '$status',
                         },
                     },
                     'start_date': {'$min': '$start_date'},
