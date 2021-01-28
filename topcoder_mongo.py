@@ -57,6 +57,12 @@ class TopcoderMongo:
             } for track in TRACK
         }
 
+        completion_count_by_track_cond = {
+            f'num_of_completed_challenge_{track}': {
+                '$sum': {'$toInt': {'$and': [{'$eq': ['$track', track]}, {'$eq': ['$status', 'Completed']}]}}
+            } for track in TRACK
+        }
+
         query = [
             {
                 '$group': {
@@ -76,6 +82,7 @@ class TopcoderMongo:
                     'end_date': {'$max': '$end_date'},
                     'num_of_challenge_Total': {'$sum': 1},
                     **count_by_track_cond,
+                    **completion_count_by_track_cond,
                     'tracks': {'$addToSet': '$track'},
                     'types': {'$addToSet': '$type'},
                 },
@@ -90,17 +97,38 @@ class TopcoderMongo:
                             ],
                         },
                     },
-                    'num_of_challenge': [{'track': track, 'count': f'$num_of_challenge_{track}'} for track in TRACK + ['Total']],
+                    'num_of_challenge': [
+                        {'track': track, 'count': f'$num_of_challenge_{track}'} for track in TRACK + ['Total']
+                    ],
+                    'completion_ratio': [
+                        {
+                            'track': track,
+                            'ratio': {
+                                '$divide': [
+                                    f'$num_of_completed_challenge_{track}',
+                                    {'$max': [f'$num_of_challenge_{track}', 1]},  # in case when the given track has 0 challenge
+                                ]
+                            },
+                        } for track in TRACK
+                    ]
                 },
             },
-            {'$project': {'_id': False, **{f'num_of_challenge_{track}': False for track in TRACK + ['Total']}}},
+            {
+                '$project': {
+                    '_id': False,
+                    **{f'num_of_challenge_{track}': False for track in TRACK + ['Total']},
+                    **{f'num_of_completed_challenge_{track}': False for track in TRACK},
+                },
+            },
         ]
 
         self.logger.info('Creating project data from challenge data...')
+
         project_data = []
         async for doc in self.challenge.aggregate(query):
             self.logger.debug('Project %s | number of challenges: %d', str(doc['id']), doc['num_of_challenge'][-1]['count'])
             project_data.append(doc)
+
         await self.project.drop()
         await self.project.insert_many(project_data)
 
