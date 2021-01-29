@@ -14,7 +14,11 @@ RESOURCE_URL = URL('{}/v5/resources/?perPage=5000'.format(os.getenv('API_BASE_UR
 AUTH_TOKEN = os.getenv('JWT') and 'Bearer {}'.format(os.getenv('JWT'))
 
 MongoConfig = namedtuple('MongoConfig', ['host', 'port', 'database'])
-MONGO_CONFIG = MongoConfig(host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT")), database=os.getenv("MONGO_DATABASE"))
+MONGO_CONFIG = MongoConfig(
+    host=os.getenv("MONGO_HOST"),
+    port=int(os.getenv("MONGO_PORT")),
+    database=os.getenv("MONGO_DATABASE")
+)
 
 # Some meta data from topcoder.com, manually written here because it's pretty short
 DETAILED_STATUS = [

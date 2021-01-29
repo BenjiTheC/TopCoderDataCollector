@@ -1,18 +1,18 @@
 """ Methods for MongoDB operation including writing fetched data and query data."""
-import asyncio
-import os
 import re
 import json
 import typing
+import asyncio
 import logging
 import pathlib
+import markdown
 import motor.motor_asyncio
-from dateutil.parser import isoparse
-from datetime import datetime, timezone
+from datetime import datetime
 from static_var import MONGO_CONFIG, TRACK
-from util import snake_case_json_key, convert_datetime_json_value
+from util import snake_case_json_key, convert_datetime_json_value, html_to_sectioned_text
 
 MONGO_CLIENT: typing.Any = None
+
 
 def connect() -> motor.motor_asyncio.AsyncIOMotorDatabase:
     """ Connect to the local MongoDB server. Return a handle of tuixue database."""
@@ -46,8 +46,15 @@ class TopcoderMongo:
         await self.write_challenges()
         await self.write_projects()
         end_initiation = datetime.now()
-        self.logger.info('Initiation starts at %s ends at %s', start_initiation.strftime('%H:%M:%S'), end_initiation.strftime('%H:%M:%S'))
-        self.logger.info('Initiation finished, total time used: %d seconds', (end_initiation - start_initiation).total_seconds())
+        self.logger.info(
+            'Initiation starts at %s ends at %s',
+            start_initiation.strftime('%H:%M:%S'),
+            end_initiation.strftime('%H:%M:%S'),
+        )
+        self.logger.info(
+            'Initiation finished, total time used: %d seconds',
+            (end_initiation - start_initiation).total_seconds()
+        )
 
     async def write_projects(self) -> None:
         """ Methods that extract project info from challenges."""
@@ -106,7 +113,7 @@ class TopcoderMongo:
                             'ratio': {
                                 '$divide': [
                                     f'$num_of_completed_challenge_{track}',
-                                    {'$max': [f'$num_of_challenge_{track}', 1]},  # in case when the given track has 0 challenge
+                                    {'$max': [f'$num_of_challenge_{track}', 1]},
                                 ]
                             },
                         } for track in TRACK
@@ -126,7 +133,11 @@ class TopcoderMongo:
 
         project_data = []
         async for doc in self.challenge.aggregate(query):
-            self.logger.debug('Project %s | number of challenges: %d', str(doc['id']), doc['num_of_challenge'][-1]['count'])
+            self.logger.debug(
+                'Project %s | number of challenges: %d',
+                str(doc['id']),
+                doc['num_of_challenge'][-1]['count']
+            )
             project_data.append(doc)
 
         await self.project.drop()
@@ -154,6 +165,13 @@ class TopcoderMongo:
             challenge_lst = convert_datetime_json_value(snake_case_json_key(json.load(f)))
 
         for challenge in challenge_lst:
+            if 'description' in challenge and 'description_format' in challenge:
+                challenge['processed_description'] = html_to_sectioned_text(
+                    challenge['description']
+                    if challenge['description_format'] == 'HTML' else
+                    markdown.markdown(challenge['description'])
+                )
+
             if challenge['num_of_registrants'] > 0:
                 with open(self.input_dir / '{}_{}_{}_registrant_lst.json'.format(year, page, challenge['id'])) as f:
                     challenge['registrant_lst'] = convert_datetime_json_value(snake_case_json_key(json.load(f)))

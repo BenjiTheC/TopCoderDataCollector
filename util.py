@@ -5,11 +5,14 @@ import re
 import logging
 import pathlib
 from glob import iglob
-from datetime import datetime, timezone
+from typing import Optional
+from collections import defaultdict
 from dateutil.parser import isoparse
+from datetime import datetime, timezone
+from bs4 import BeautifulSoup, NavigableString, Tag, PageElement
 
 CAMEL_CASE_REGEX = re.compile(r'(?<!^)(?=[A-Z])')
-# NOTE: This regex below is NOT solid but sufficient for our use case
+
 
 def init_logger(log_dir: pathlib.Path, log_name: str, debug: bool) -> logging.Logger:
     """ Initiate logger for fetching."""
@@ -80,3 +83,39 @@ def replace_datetime_tail(dt: datetime, tail: str = 'max'):
 def datetime_to_isoformat(dt: datetime):
     """ The built-in datetime.isoformat doesn't have trailing Z"""
     return '{}Z'.format(dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
+
+
+def html_to_sectioned_text(html: str) -> list[dict]:
+    """ Convert html file/segments to text which sectioned by header(<h*>) tag."""
+    sectioned_text = defaultdict(list)
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # There are some img tags and a tags that won't be extracted below, do it now.
+    if soup.a:
+        soup.a.decompose()
+    if soup.img:
+        soup.img.decompose()
+
+    header_tags = soup.find_all(re.compile('^h'))
+
+    if len(header_tags) == 0:
+        return [{'name': 'null', 'text': soup.get_text()}]
+
+    for header in header_tags:
+        section_name = header.get_text()
+
+        next_node: Optional[PageElement] = header
+        while True:
+            next_node = next_node.next_sibling
+
+            if next_node is None:
+                break
+
+            if isinstance(next_node, NavigableString):
+                sectioned_text[section_name].append(' '.join(next_node.strip().split()))
+            elif isinstance(next_node, Tag):
+                if next_node.name.startswith('h'):
+                    break
+                sectioned_text[section_name].append(' '.join(next_node.get_text().split()))
+
+    return [{'name': name, 'text': ' '.join(texts)} for name, texts in sectioned_text.items()]

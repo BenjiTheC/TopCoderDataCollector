@@ -50,5 +50,6 @@ def init():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(TopcoderMongo(logger, args.input_dir).initiate_database())
 
+
 if __name__ == '__main__':
     init()
