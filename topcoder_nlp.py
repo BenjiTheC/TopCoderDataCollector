@@ -18,15 +18,14 @@ def tokenize(s: str) -> list[str]:
     return [w for w in utils.simple_preprocess(s, max_len=20) if w not in STOPWORDS]
 
 
-# TODO: build tfidf model for each section group. calculate the average similarity.
-def section_text_similarity(corpus: Sequence[str]):
+def compute_section_text_similarity(corpus: Sequence[str]):
     """ Convert text bundle into tfidf vectors."""
     # Use generator to increase memory efficiency
     def tokenized_corpus() -> typing.Generator[list[str], None, None]:
         yield from (tokenize(doc) for doc in corpus)
 
     def bag_of_words_corpus(dct: corpora.Dictionary) -> typing.Generator[list[tuple[int, int]], None, None]:
-        yield from (dct.doc2bow(doc) for doc in corpus)
+        yield from (dct.doc2bow(doc) for doc in tokenized_corpus())
 
     word_id_map = corpora.Dictionary(tokenized_corpus())
     tfidf = models.TfidfModel(bag_of_words_corpus(word_id_map), dictionary=word_id_map)

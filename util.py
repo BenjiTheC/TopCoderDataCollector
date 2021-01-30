@@ -102,7 +102,7 @@ def html_to_sectioned_text(html: str) -> list[dict]:
         return [{'name': 'null', 'text': soup.get_text()}]
 
     for header in header_tags:
-        section_name = header.get_text()
+        section_name = ' '.join(header.get_text().strip().split())
 
         next_node: Optional[PageElement] = header
         while True:

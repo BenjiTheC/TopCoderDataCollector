@@ -8,8 +8,12 @@ import pathlib
 import markdown
 import motor.motor_asyncio
 from datetime import datetime
+from asyncio import AbstractEventLoop
+from concurrent.futures import ThreadPoolExecutor
+
 from static_var import MONGO_CONFIG, TRACK
 from util import snake_case_json_key, convert_datetime_json_value, html_to_sectioned_text
+from topcoder_nlp import compute_section_text_similarity
 
 MONGO_CLIENT: typing.Any = None
 
@@ -30,6 +34,14 @@ def get_collection(collection_name: str) -> motor.motor_asyncio.AsyncIOMotorColl
     return db.get_collection(collection_name)
 
 
+class ProjectSection(typing.TypedDict):
+    """ Type def of project in section text similarity computation."""
+    project_id: int
+    section_name: str
+    section_texts: list[str]
+    section_freq: int
+
+
 class TopcoderMongo:
     """ MongoDB database operation using Motor"""
     challenge = get_collection('challenge')
@@ -43,8 +55,10 @@ class TopcoderMongo:
     async def initiate_database(self) -> None:
         start_initiation = datetime.now()
         await self.challenge.drop()
+        await self.project.drop()
         await self.write_challenges()
         await self.write_projects()
+        await self.write_project_section_sim()
         end_initiation = datetime.now()
         self.logger.info(
             'Initiation starts at %s ends at %s',
@@ -71,6 +85,7 @@ class TopcoderMongo:
         }
 
         query = [
+            {'$match': {'project_id': {'$ne': None}}},
             {
                 '$group': {
                     '_id': '$project_id',
@@ -96,6 +111,7 @@ class TopcoderMongo:
             },
             {
                 '$set': {
+                    'id': {'$toInt': '$id'},
                     'duration': {
                         '$toInt': {
                             '$divide': [
@@ -142,6 +158,88 @@ class TopcoderMongo:
 
         await self.project.drop()
         await self.project.insert_many(project_data)
+
+    async def write_project_section_sim(self) -> None:
+        """ Calculate project section text similarity.
+            Criteria for section similarity comparison:
+            1. The length of text in a section should be greater than 0.
+            2. The grouped section texts shoud contain more than 1 document (i.e `len(section_texts) > 1`).
+        """
+        self.logger.info('Computing section text similarity for projects...')
+        query = [
+            {'$match': {'project_id': {'$ne': None}}},
+            {
+                '$project': {
+                    'project_id': {'$toInt': '$project_id'},
+                    'processed_description': {
+                        '$filter': {
+                            'input': '$processed_description',
+                            'as': 'desc',
+                            'cond': {'$gt': [{'$strLenCP': '$$desc.text'}, 0]},
+                        },
+                    },
+                },
+            },
+            {'$unwind': '$processed_description'},
+            {
+                '$group': {
+                    '_id': {'project_id': '$project_id', 'section_name': '$processed_description.name'},
+                    'section_texts': {'$push': '$processed_description.text'},
+                },
+            },
+            {
+                '$replaceRoot': {
+                    'newRoot': {
+                        '$mergeObjects': [
+                            '$_id',
+                            {'section_texts': '$section_texts', 'section_freq': {'$size': '$section_texts'}},
+                        ],
+                    },
+                },
+            },
+            {'$match': {'$expr': {
+                '$and': [{'$gt': ['$section_freq', 1]}, {'$lte': [{'$strLenCP': '$section_name'}, 128]}]
+            }}},
+        ]
+
+        with ThreadPoolExecutor(max_workers=2 ** 10) as executor:  # This is computationally super expensive
+            await asyncio.gather(*[
+                asyncio.create_task(
+                    self.compute_project_section_sim(project, executor),
+                    name='ProjSec-{}-{}'.format(project['project_id'], project['section_name']),
+                ) async for project in self.challenge.aggregate(query)]
+            )
+
+    async def compute_project_section_sim(
+        self,
+        project: ProjectSection,
+        executor: ThreadPoolExecutor,
+    ):
+        """ Compute the section text similarity."""
+        loop: AbstractEventLoop = asyncio.get_running_loop()
+
+        self.logger.debug('Computing project %d section %s', project['project_id'], project['section_name'])
+
+        section_sim = await loop.run_in_executor(executor, compute_section_text_similarity, project['section_texts'])
+        section_expr = {
+            'name': project['section_name'],
+            'similarity': section_sim,
+            'frequency': {'$divide': [project['section_freq'], {'$max': '$num_of_challenge.count'}]},  # a little hack here
+        }
+        await self.project.update_one(
+            {'id': project['project_id']},
+            [
+                {
+                    '$set': {
+                        'section_similarity': {
+                            '$concatArrays':[{'$ifNull': ['$section_similarity', []]}, [section_expr]],
+                        },
+                    },
+                },
+            ],
+        )
+
+        self.logger.info('Updated project %s section %s sim %f', project['project_id'], project['section_name'], section_sim)
 
     async def write_challenges(self) -> None:
         """ Methods for inserting all of the fetch challenges. (Of course we pre-process it before inserting ;-)"""
