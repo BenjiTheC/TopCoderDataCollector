@@ -9,7 +9,7 @@ The data scraper for collecting research data from Topcoder.com
 run
 
 ```sh
-python3 -m pip install -r requirements.py
+python3 -m pip install -r requirements.txt
 ```
 
 to install the packages needed in the code. A virtural environment is recommended.
@@ -26,11 +26,13 @@ python3 topcoder_data_collecter.py --with-registrant --since 2014-1-1 --to 2020-
 
 ### Uploader
 
-> Write the data into mongoDB
+To initiate and write data into the MongoDB database, make sure that the data JSON files are placed in the `data` folder under the repository's root. And run following command.
 
 ```sh
 python3 topcoder_data_uploader.py --debug # You can emit debug flag, it will print less information
 ```
+
+> SQL database's writing method is under development
 
 ## Major APIs and the documentation
 
