@@ -16,16 +16,6 @@ brew install python@3.9
 >
 > You may need to manuanly link the `python3` command to Python 3.9 if you have other Python versions installed using `homebrew`.
 
-run
-
-```sh
-python3 -m pip install -r requirements.txt
-```
-
-to install the packages needed in the code. A virtural environment is recommended.
-
-### Set up runtime environment variable
-
 We use .env file to manage the secrets such as database username and password (when using MySQL or MongoDB on a remote server). Make a copy of `.env.default` file and rename it to `.env`.
 
 ```sh
@@ -33,6 +23,29 @@ cp .env.default .env
 ```
 
 We use [`python-dotenv`](https://github.com/theskumar/python-dotenv) to load the file during the runtime. For more info regarding .env file, see <https://12factor.net/>
+
+Using Python virtual environment is recommended. Run following commands under repo's root
+
+```sh
+python3 -m venv venv  # first `venv` stands for a Python library, second one is the folder's name
+source ./venv/bin/activate
+```
+
+run
+
+```sh
+deactivate
+```
+
+to exit the virtual environment
+
+run
+
+```sh
+python3 -m pip install -r requirements.txt
+```
+
+to install the packages needed in the code.
 
 ## Command Line Interface design
 
