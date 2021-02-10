@@ -4,7 +4,17 @@ The data scraper for collecting research data from Topcoder.com
 
 ## Dependency
 
-**This repo is written in Python 3.9.1.**
+**This repo is written in Python 3.9.1.**, to install Python 3.9, see <python.org>.
+
+> MacOS users are recommended to use [`homebrew`](https://formulae.brew.sh/formula/python@3.9) to install Python 3.9 so that the installed version will not mess up the one used by the system.r
+>
+
+```sh
+brew install python@3.9
+```
+
+>
+> You may need to manuanly link the `python3` command to Python 3.9 if you have other Python versions installed using `homebrew`.
 
 run
 
@@ -13,6 +23,16 @@ python3 -m pip install -r requirements.txt
 ```
 
 to install the packages needed in the code. A virtural environment is recommended.
+
+### Set up runtime environment variable
+
+We use .env file to manage the secrets such as database username and password (when using MySQL or MongoDB on a remote server). Make a copy of `.env.default` file and rename it to `.env`.
+
+```sh
+cp .env.default .env
+```
+
+We use [`python-dotenv`](https://github.com/theskumar/python-dotenv) to load the file during the runtime. For more info regarding .env file, see <https://12factor.net/>
 
 ## Command Line Interface design
 
