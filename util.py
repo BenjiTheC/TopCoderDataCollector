@@ -5,7 +5,7 @@ import re
 import logging
 import pathlib
 from glob import iglob
-from typing import Optional
+from typing import Optional, Union
 from collections import defaultdict
 from dateutil.parser import isoparse
 from datetime import datetime, timezone
@@ -86,36 +86,38 @@ def datetime_to_isoformat(dt: datetime):
 
 
 def html_to_sectioned_text(html: str) -> list[dict]:
-    """ Convert html file/segments to text which sectioned by header(<h*>) tag."""
+    """ Rules for sectionize the text:
+        - An h tag owns all the next_siblings text until there is another h tag
+        - An h tag owns all the children text until there is a child h tag
+        - If a tag has no h tag in its children, it's the end node
+    """
     sectioned_text = defaultdict(list)
+    section_name, section_lvl = 'null', 0
+    h_tag_regex = re.compile(r'^h[1-6]')
+    def go_down_html_tree(node: PageElement, section_name: str, section_lvl: int):
+        """ Recursively parsing the text by header tag section."""
+        for child_node in node.children:
+            if isinstance(child_node, Tag) and h_tag_regex.match(child_node.name):
+                section_name, section_lvl = child_node.get_text(), int(child_node.name[1])
+                sectioned_text[(section_name, section_lvl)].append('')  # placeholder incase there is no text
+                continue
+            if isinstance(child_node, Tag) and child_node.find(h_tag_regex) is None:
+                sectioned_text[(section_name, section_lvl)].append(' '.join(child_node.get_text().split()))
+                continue
+            if isinstance(child_node, NavigableString):
+                if child_node.strip():
+                    sectioned_text[(section_name, section_lvl)].append(' '.join(child_node.strip().split()))
+                continue
+            go_down_html_tree(child_node, section_name, section_lvl)
+
     soup = BeautifulSoup(html, 'html.parser')
 
-    # There are some img tags and a tags that won't be extracted below, do it now.
-    if soup.a:
-        soup.a.decompose()
-    if soup.img:
-        soup.img.decompose()
+    a: Tag
+    img: Tag
+    for a in soup.find_all('a'):
+        a.replace_with(a.get_text())
+    for img in soup.find_all('img'):
+        img.decompose()
 
-    header_tags = soup.find_all(re.compile('^h'))
-
-    if len(header_tags) == 0:
-        return [{'name': 'null', 'text': soup.get_text()}]
-
-    for header in header_tags:
-        section_name = ' '.join(header.get_text().strip().split())
-
-        next_node: Optional[PageElement] = header
-        while True:
-            next_node = next_node.next_sibling
-
-            if next_node is None:
-                break
-
-            if isinstance(next_node, NavigableString):
-                sectioned_text[section_name].append(' '.join(next_node.strip().split()))
-            elif isinstance(next_node, Tag):
-                if next_node.name.startswith('h'):
-                    break
-                sectioned_text[section_name].append(' '.join(next_node.get_text().split()))
-
-    return [{'name': name, 'text': ' '.join(texts)} for name, texts in sectioned_text.items()]
+    go_down_html_tree(soup, section_name, section_lvl)
+    return [{'name': name, 'level': lvl, 'text': ' '.join(texts)} for (name, lvl), texts in sectioned_text.items()]
