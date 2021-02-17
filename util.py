@@ -120,4 +120,4 @@ def html_to_sectioned_text(html: str) -> list[dict]:
         img.decompose()
 
     go_down_html_tree(soup, section_name, section_lvl)
-    return [{'name': name, 'level': lvl, 'text': ' '.join(texts)} for (name, lvl), texts in sectioned_text.items()]
+    return [{'name': ' '.join(name.split()), 'level': lvl, 'text': ' '.join(texts)} for (name, lvl), texts in sectioned_text.items()]
