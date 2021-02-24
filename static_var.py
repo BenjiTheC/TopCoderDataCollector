@@ -13,11 +13,13 @@ CHALLENGE_URL = URL('{}/v5/challenges/?{}'.format(os.getenv('API_BASE_URL'), os.
 RESOURCE_URL = URL('{}/v5/resources/?perPage=5000'.format(os.getenv('API_BASE_URL')))
 AUTH_TOKEN = os.getenv('JWT') and 'Bearer {}'.format(os.getenv('JWT'))
 
-MongoConfig = namedtuple('MongoConfig', ['host', 'port', 'database'])
+MongoConfig = namedtuple('MongoConfig', ['host', 'port', 'username', 'password', 'database'])
 MONGO_CONFIG = MongoConfig(
     host=os.getenv("MONGO_HOST"),
-    port=int(os.getenv("MONGO_PORT")),
-    database=os.getenv("MONGO_DATABASE")
+    port=os.getenv("MONGO_PORT") and int(os.getenv("MONGO_PORT")),
+    username=os.getenv('MONGO_USER'),
+    password=os.getenv('MONGO_PSWD'),
+    database=os.getenv("MONGO_DATABASE"),
 )
 
 # Some meta data from topcoder.com, manually written here because it's pretty short

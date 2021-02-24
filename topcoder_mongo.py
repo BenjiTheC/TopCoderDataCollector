@@ -11,6 +11,7 @@ from datetime import datetime
 from asyncio import AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor
 
+from url import URL
 from static_var import MONGO_CONFIG, TRACK
 from util import snake_case_json_key, convert_datetime_json_value, html_to_sectioned_text
 from topcoder_nlp import compute_section_text_similarity
@@ -18,11 +19,25 @@ from topcoder_nlp import compute_section_text_similarity
 MONGO_CLIENT: typing.Any = None
 
 
+def construct_mongo_url():
+    """ Construct URL for connecting to MongoDB."""
+    url = URL('')
+    if MONGO_CONFIG.host in ['127.0.0.1', 'localhost']:
+        url.scheme = 'mongodb'
+        url.netloc = f'{MONGO_CONFIG.host}:{MONGO_CONFIG.port}'
+    else:
+        url.scheme = 'mongodb+srv'
+        url.netloc = f'{MONGO_CONFIG.username}:{MONGO_CONFIG.password}@{MONGO_CONFIG.host}'
+        url.path = MONGO_CONFIG.database
+        url.query_param.set('retryWrites', 'true')
+        url.query_param.set('w', 'majority')
+    return str(url)
+
 def connect() -> motor.motor_asyncio.AsyncIOMotorDatabase:
     """ Connect to the local MongoDB server. Return a handle of tuixue database."""
     global MONGO_CLIENT
     if MONGO_CLIENT is None:  # keep one alive connection will be enough (and preferred)
-        MONGO_CLIENT = motor.motor_asyncio.AsyncIOMotorClient(host=MONGO_CONFIG.host, port=MONGO_CONFIG.port)
+        MONGO_CLIENT = motor.motor_asyncio.AsyncIOMotorClient(construct_mongo_url())
 
     database = MONGO_CLIENT[MONGO_CONFIG.database]
     return database

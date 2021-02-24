@@ -1,11 +1,9 @@
 """ Utility functions"""
-
 import os
 import re
 import logging
 import pathlib
 from glob import iglob
-from typing import Optional, Union
 from collections import defaultdict
 from dateutil.parser import isoparse
 from datetime import datetime, timezone
